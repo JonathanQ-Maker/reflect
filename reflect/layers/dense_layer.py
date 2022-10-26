@@ -6,6 +6,10 @@ class Dense(AbstractLayer):
     output_size = None
     output_shape = None
 
+    input_size = None
+    input_shape = None
+    input = None
+
     weight = None
     weight_type = None
     dldw = None
@@ -13,14 +17,11 @@ class Dense(AbstractLayer):
     bias = None
     dldb = None
 
-    input_size = None
-    input_shape = None
-    input = None
-
     regularizer = None
 
 
-    def __init__(self, input_size = 1, output_size = 1, batch_size = 1, weight_type = "he", regularizer=None):
+    def __init__(self, input_size = 1, output_size = 1, batch_size = 1, weight_type = "he", 
+                 regularizer=None):
         super().__init__(batch_size)
         self.input_size     = input_size
         self.output_size    = output_size
@@ -48,6 +49,8 @@ class Dense(AbstractLayer):
         if (self.regularizer != None):
             self.regularizer.shape = self.weight.shape
             self.regularizer.compile()
+
+        self.name = f"Dense {self.output_size}"
 
     def is_compiled(self):
         output_size_match = self.output_shape == (self.batch_size, self.output_size)
@@ -85,6 +88,7 @@ class Dense(AbstractLayer):
         return: output
 
         Make copy of output if intended to be modified
+        Input instance will be kept and expected not to be modified between forward and backward pass
         """
         self.input = X
         return np.add(np.dot(X, self.weight, out=self.output), self.bias, out=self.output)
@@ -104,3 +108,17 @@ class Dense(AbstractLayer):
             np.add(self.bias, step * self.dldb, out=self.bias)      # bias update
         return np.dot(dldz, self.weight.T, out=self.dldx)           
 
+    def __str__(self):
+        return self.attribute_to_str()
+
+    def attribute_to_str(self):
+        return (super().attribute_to_str()
+        + f"output size:    {self.output_size}\n"
+        + f"output_shape:   {self.output_shape}\n"
+        + f"input size:     {self.input_size}\n"
+        + f"input_shape:    {self.input_shape}\n"
+        + f"weight init:    {self.weight_type}\n"
+        + f"max weight:     {self.weight.max()}\n"
+        + f"min weight:     {self.weight.min()}\n"
+        + f"weight std:     {np.std(self.weight)}\n"
+        + f"weight mean:    {np.mean(self.weight)}\n")

@@ -20,18 +20,19 @@ def dense_one_layer_test():
     l.compile()
 
     assert l.is_compiled(), "Dense layer is not compiled"
+    print(str(l))
 
     input = np.random.uniform(size=input_shape)
     target = np.random.uniform(size=output_shape)
     
     output = l.forward(input)
     residual = target - output
-    loss = np.sum(residual ** 2, axis=1)
+    loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
     init_loss = loss
     for i in range(step_count):
         output = l.forward(input)
         residual = target - output
-        loss = np.sum(residual ** 2, axis=1)
+        loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
         l.backprop(residual, step)
 
         if (i % 10 == 0):
@@ -42,11 +43,11 @@ def dense_one_layer_test():
     print("dense_one_layer_test() passed\n")
 
 def dense_multi_layer_test():
-    batch_size = 2
-    dimentions = [5, 4, 3, 7, 6, 5, 4, 3]
+    batch_size = 20
+    dimentions = [50, 40, 30, 70, 60, 50, 40, 30]
     input_shape = (batch_size, dimentions[0])
     output_shape = (batch_size, dimentions[-1])
-    step = 0.001
+    step = 0.0001
     step_count = 100
 
     input = np.random.uniform(size=input_shape)
@@ -66,9 +67,12 @@ def dense_multi_layer_test():
         output = input
         for i in range(len(layers)):
             output = layers[i].forward(output)
+            assert np.std(output) > 0.1, "std at layer {i} is less than 0.1"
+            if (e == 0):
+                print(f"layer[{i}] out std: {np.std(output)}")
 
         residual = target - output
-        loss = np.sum(residual ** 2, axis=1)
+        loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
         if (e == 0):
             init_loss = loss
         elif (e == step_count - 1):
@@ -119,12 +123,12 @@ def dense_one_layer_l1_regularizer_test():
     for d in [l, ctrl]:
         output = d.forward(input)
         residual = target - output
-        loss = np.sum(residual ** 2, axis=1)
+        loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
         init_loss = loss
         for i in range(step_count):
             output = d.forward(input)
             residual = target - output
-            loss = np.sum(residual ** 2, axis=1)
+            loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
             d.backprop(residual, step)
 
             if (i % 10 == 0):
@@ -174,12 +178,12 @@ def dense_one_layer_l2_regularizer_test():
     for d in [l, ctrl]:
         output = d.forward(input)
         residual = target - output
-        loss = np.sum(residual ** 2, axis=1)
+        loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
         init_loss = loss
         for i in range(step_count):
             output = d.forward(input)
             residual = target - output
-            loss = np.sum(residual ** 2, axis=1)
+            loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
             d.backprop(residual, step)
 
             if (i % 10 == 0):
