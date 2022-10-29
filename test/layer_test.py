@@ -17,7 +17,7 @@ def dense_one_layer_test():
 
     l = Dense(input_size, output_size, batch_size, "xavier")
     assert not l.is_compiled(), "Dense layer should not be compiled"
-    l.compile()
+    l.compile(gen_param=True)
 
     assert l.is_compiled(), "Dense layer is not compiled"
     print(str(l))
@@ -33,7 +33,8 @@ def dense_one_layer_test():
         output = l.forward(input)
         residual = target - output
         loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
-        l.backprop(residual, step)
+        l.backprop(residual)
+        l.apply_grad(step)
 
         if (i % 10 == 0):
             print(f"Loss[{i}]: {loss}")
@@ -57,7 +58,7 @@ def dense_multi_layer_test():
     for i in range(len(dimentions) - 1):
         l = Dense(dimentions[i], dimentions[i + 1], batch_size, "xavier")
         assert not l.is_compiled(), "Dense layer should not be compiled"
-        l.compile()
+        l.compile(gen_param=True)
         assert l.is_compiled(), f"Layer {i} is not compiled"
         layers.append(l)
 
@@ -83,7 +84,8 @@ def dense_multi_layer_test():
 
         dldx = residual
         for i in reversed(range(len(layers))):
-            dldx = layers[i].backprop(dldx, step)
+            dldx = layers[i].backprop(dldx)
+            layers[i].apply_grad(step)
 
     print(f"Final loss - Initial Loss = {final_loss - init_loss}")
     assert np.all(final_loss < init_loss), "final loss is not smaller than initial loss"
@@ -104,18 +106,20 @@ def dense_one_layer_l1_regularizer_test():
     reg = L1(coeff)
     l = Dense(input_size, output_size, batch_size, "xavier", reg)
     ctrl = Dense(input_size, output_size, batch_size, "xavier")
-    assert np.all(l.weight == ctrl.weight), "Layers weights are different"
     assert not l.is_compiled(), "Dense layer should not be compiled"
     assert not reg.is_compiled(), "Regularizer should not be compiled"
 
     np.random.seed(0)
-    l.compile()
+    l.compile(gen_param=True)
     np.random.seed(0)
-    ctrl.compile()
+    ctrl.compile(gen_param=True)
+
+    assert l.param is not ctrl.param, "layer and control layer param is the same"
+    assert np.all(l.param.weight == ctrl.param.weight), "Layers weights are different"
 
     assert l.is_compiled(), "Dense layer is not compiled"
     assert reg.is_compiled(), "Regularizer is not compiled"
-    assert reg.grad.shape == l.weight.shape, "Regularizer grad.shape != weight.shape"
+    assert reg.grad.shape == l.weight_shape, "Regularizer grad.shape != weight.shape"
 
     input = np.random.uniform(size=input_shape)
     target = np.random.uniform(size=output_shape)
@@ -129,7 +133,8 @@ def dense_one_layer_l1_regularizer_test():
             output = d.forward(input)
             residual = target - output
             loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
-            d.backprop(residual, step)
+            d.backprop(residual)
+            d.apply_grad(step)
 
             if (i % 10 == 0):
                 print(f"Loss[{i}]: {loss}")
@@ -137,8 +142,8 @@ def dense_one_layer_l1_regularizer_test():
         print(f"Final loss - Initial Loss = {final_loss - init_loss}")
         assert np.all(final_loss < init_loss), "final loss is not smaller than initial loss"
 
-    l_weight_norm = np.linalg.norm(l.weight)
-    ctrl_weight_norm = np.linalg.norm(ctrl.weight)
+    l_weight_norm = np.linalg.norm(l.param.weight)
+    ctrl_weight_norm = np.linalg.norm(ctrl.param.weight)
     assert l_weight_norm < ctrl_weight_norm, "regularized weight norm bigger than non regularized"
     print(f"l_weight_norm: {np.round(l_weight_norm, 3)}, ctrl_weight_norm: {np.round(ctrl_weight_norm, 3)}")
 
@@ -159,18 +164,20 @@ def dense_one_layer_l2_regularizer_test():
     reg = L2(coeff)
     l = Dense(input_size, output_size, batch_size, "xavier", reg)
     ctrl = Dense(input_size, output_size, batch_size, "xavier")
-    assert np.all(l.weight == ctrl.weight), "Layers weights are different"
     assert not l.is_compiled(), "Dense layer should not be compiled"
     assert not reg.is_compiled(), "Regularizer should not be compiled"
 
     np.random.seed(0)
-    l.compile()
+    l.compile(gen_param=True)
     np.random.seed(0)
-    ctrl.compile()
+    ctrl.compile(gen_param=True)
+
+    assert l.param is not ctrl.param, "layer and control layer param is the same"
+    assert np.all(l.param.weight == ctrl.param.weight), "Layers weights are different"
 
     assert l.is_compiled(), "Dense layer is not compiled"
     assert reg.is_compiled(), "Regularizer is not compiled"
-    assert reg.grad.shape == l.weight.shape, "Regularizer grad.shape != weight.shape"
+    assert reg.grad.shape == l.weight_shape, "Regularizer grad.shape != weight.shape"
 
     input = np.random.uniform(size=input_shape)
     target = np.random.uniform(size=output_shape)
@@ -184,7 +191,8 @@ def dense_one_layer_l2_regularizer_test():
             output = d.forward(input)
             residual = target - output
             loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
-            d.backprop(residual, step)
+            d.backprop(residual)
+            d.apply_grad(step)
 
             if (i % 10 == 0):
                 print(f"Loss[{i}]: {loss}")
@@ -192,8 +200,8 @@ def dense_one_layer_l2_regularizer_test():
         print(f"Final loss - Initial Loss = {final_loss - init_loss}")
         assert np.all(final_loss < init_loss), "final loss is not smaller than initial loss"
 
-    l_weight_norm = np.linalg.norm(l.weight)
-    ctrl_weight_norm = np.linalg.norm(ctrl.weight)
+    l_weight_norm = np.linalg.norm(l.param.weight)
+    ctrl_weight_norm = np.linalg.norm(ctrl.param.weight)
     assert l_weight_norm < ctrl_weight_norm, "regularized weight norm bigger than non regularized"
     print(f"l_weight_norm: {np.round(l_weight_norm, 3)}, ctrl_weight_norm: {np.round(ctrl_weight_norm, 3)}")
 
@@ -223,6 +231,56 @@ def regularizers_test():
     assert l1_grad_norm < l1l2_grad_norm and l2_grad_norm < l1l2_grad_norm, "l1l2 gradient norm smaller"
     print("regularizers_test() passed")
 
+def dense_param_switch_test():
+    input_size = 5
+    output_size = 10
+    batch_size = 2
+    count = 100
+    step = 0.01
+
+    l = Dense(input_size, output_size, batch_size, "xavier", L2(0.01))
+    l.compile(gen_param=True)
+    param = l.param
+    param2 = l.create_param()
+
+    assert param is not param2, "params the same instance"
+    assert np.all(param.bias.shape == param2.bias.shape), "bias does not match"
+    assert np.all(param.weight.shape == param2.weight.shape), "weights does not match"
+    assert param.weight_type == param2.weight_type, "weight types does not match"
+    assert param.regularizer is not param2.regularizer, "regularizer is the same insatnce"
+
+    assert l.param_compatible(param), "generated param is not compatible"
+
+    np.copyto(param2.weight, param.weight)
+
+    input = np.random.uniform(size=l.input_shape)
+    target = np.random.uniform(size=l.output_shape)
+
+    inital_output = np.copy(l.forward(input))
+
+    for i in range(count):
+        output = l.forward(input)
+        residual = target - output
+        loss = np.sum(residual ** 2)
+        if (i % 10 == 0):
+            print(f"loss[{i}]: {np.round(loss, 3)}")
+        l.backprop(residual)
+        l.apply_grad(step)
+
+    param_output = np.copy(l.forward(input))
+    l.apply_param(param2)
+    param2_output = np.copy(l.forward(input))
+
+    assert np.all(param_output != param2_output), "some param outputs are same"
+    assert np.any(inital_output != param_output), "layer output is still the same after backprop"
+    assert np.all(inital_output == param2_output), "layer output is not the same when switched to original param"
+    print("dense_param_switch_test() passed")
+
+
+
+
+    
+
 
 
 
@@ -233,3 +291,4 @@ if (__name__ == "__main__"):
     dense_one_layer_l1_regularizer_test()
     dense_one_layer_l2_regularizer_test()
     regularizers_test()
+    dense_param_switch_test()
