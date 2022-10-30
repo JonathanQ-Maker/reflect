@@ -311,6 +311,41 @@ def dense_num_grad_test():
     assert np.allclose(grad, real_grad, atol = 1e-4), "num_grad and real gradient differ"
     print("dense_num_grad_test() passed\n")
 
+def multi_dense_num_grad_test():
+    np.set_printoptions(precision=8)
+    input_size = 5
+    output_size_1 = 7
+    output_size_2 = 3
+    batch_size = 2
+
+
+    l1 = Dense(input_size, output_size_1, batch_size, "xavier")
+    l2 = Dense(output_size_1, output_size_2, batch_size, "xavier")
+    l1.compile(gen_param=True)
+    l2.compile(gen_param=True)
+
+    input = np.random.uniform(size=l1.input_shape)
+    target = np.random.uniform(size=l2.output_shape)
+    weight_original = l1.param.weight
+    weight = np.copy(l1.param.weight)
+
+    def forward(W):
+        l1.param.weight = W
+        return np.sum((target - l2.forward(l1.forward(input)))**2) / 2
+
+    grad = num_grad(forward, weight)
+
+    l1.param.weight = weight_original
+    residual = target - l2.forward(l1.forward(input))
+    l1.backprop(l2.backprop(residual))
+    real_grad = -l1.dldw
+
+    assert np.all(grad != real_grad), "grad == real_grad strictly"
+    assert grad is not real_grad, "grad and real_grad is the same instance"
+    print(f"grad:\n{grad}\n\nreal_grad:\n{real_grad}")
+    assert np.allclose(grad, real_grad, atol = 1e-4), "num_grad and real gradient differ"
+    print("dense_num_grad_test() passed\n")
+
 
 
 
@@ -328,3 +363,4 @@ if (__name__ == "__main__"):
     regularizers_test()
     dense_param_switch_test()
     dense_num_grad_test()
+    multi_dense_num_grad_test()
