@@ -1,5 +1,5 @@
 from reflect.layers.parametric_layer import ParametricLayer
-import numpy as np
+from reflect import np
 import copy
 
 class Dense(ParametricLayer):
@@ -98,7 +98,7 @@ class Dense(ParametricLayer):
         """
         np.dot(self.input.T, dldz, out=self.dldw)
         np.sum(dldz, axis=0, out=self.dldb)
-        if (self.regularizer is not None):
+        if (self.regularizer != None):
             np.subtract(self.dldw, self.regularizer.gradient(self.param.weight), out=self.dldw)
         return np.dot(dldz, self.param.weight.T, out=self.dldx)
 

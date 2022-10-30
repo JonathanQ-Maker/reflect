@@ -1,5 +1,5 @@
 from reflect.layers.absrtact_layer import AbstractLayer
-import numpy as np
+from reflect import np
 
 class Relu(AbstractLayer):
 

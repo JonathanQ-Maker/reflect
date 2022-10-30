@@ -1,4 +1,4 @@
-import numpy as np
+from reflect import np
 from reflect.compiled_object import CompiledObject
 
 class L2(CompiledObject):

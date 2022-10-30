@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from reflect.compiled_object import CompiledObject
-import numpy as np
+from reflect import np
 
 class AbstractLayer(CompiledObject):
     """
