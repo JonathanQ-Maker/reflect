@@ -5,8 +5,8 @@ class Relu(AbstractLayer):
 
     input = None
 
-    def __init__(self, input_size=1, output_size=1, batch_size=1):
-        super().__init__(input_size, output_size, batch_size)
+    def __init__(self, input_size=1, batch_size=1):
+        super().__init__(input_size, input_size, batch_size)
 
 
     def compile(self):

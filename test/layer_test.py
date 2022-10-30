@@ -1,7 +1,7 @@
 from reflect.layers import Dense
 import numpy as np
 from reflect.regularizers import L1, L2, L1L2
-from reflect.profiler.numerical_gradient import num_grad
+from reflect.profiler import num_grad
 
 np.set_printoptions(precision=3)
 np.random.seed(0)
@@ -346,6 +346,41 @@ def multi_dense_num_grad_test():
     assert np.allclose(grad, real_grad, atol = 1e-4), "num_grad and real gradient differ"
     print("multi_dense_num_grad_test() passed\n")
 
+def multi_dense_num_grad_bias_test():
+    np.set_printoptions(precision=8)
+    input_size = 5
+    output_size_1 = 7
+    output_size_2 = 3
+    batch_size = 2
+
+
+    l1 = Dense(input_size, output_size_1, batch_size, "xavier")
+    l2 = Dense(output_size_1, output_size_2, batch_size, "xavier")
+    l1.compile(gen_param=True)
+    l2.compile(gen_param=True)
+
+    input = np.random.uniform(size=l1.input_shape)
+    target = np.random.uniform(size=l2.output_shape)
+    bias_original = l1.param.bias
+    bias = np.copy(l1.param.bias)
+
+    def forward(b):
+        l1.param.bias = b
+        return np.sum((target - l2.forward(l1.forward(input)))**2) / 2
+
+    grad = num_grad(forward, bias)
+
+    l1.param.bias = bias_original
+    residual = target - l2.forward(l1.forward(input))
+    l1.backprop(l2.backprop(residual))
+    real_grad = -l1.dldb
+
+    assert np.all(grad != real_grad), "grad == real_grad strictly"
+    assert grad is not real_grad, "grad and real_grad is the same instance"
+    print(f"grad:\n{grad}\n\nreal_grad:\n{real_grad}")
+    assert np.allclose(grad, real_grad, atol = 1e-4), "num_grad and real gradient differ"
+    print("multi_dense_num_grad_bias_test() passed\n")
+
 
 
 
@@ -364,3 +399,4 @@ if (__name__ == "__main__"):
     dense_param_switch_test()
     dense_num_grad_test()
     multi_dense_num_grad_test()
+    multi_dense_num_grad_bias_test()
