@@ -344,7 +344,7 @@ def multi_dense_num_grad_test():
     assert grad is not real_grad, "grad and real_grad is the same instance"
     print(f"grad:\n{grad}\n\nreal_grad:\n{real_grad}")
     assert np.allclose(grad, real_grad, atol = 1e-4), "num_grad and real gradient differ"
-    print("dense_num_grad_test() passed\n")
+    print("multi_dense_num_grad_test() passed\n")
 
 
 
