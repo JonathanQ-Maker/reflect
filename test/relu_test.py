@@ -94,7 +94,25 @@ def multi_dense_relu_num_grad_weight_test():
     assert np.allclose(grad, real_grad, atol = 1e-4), "num_grad and real gradient differ"
     print("multi_dense_relu_num_grad_weight_test() passed\n")
 
+def relu_shape_test():
+    input_size = 2
+
+    l = Relu(input_size, 3)
+    l.compile()
+
+    assert l.output_shape == l.input_shape, "Input, output shape differ"
+    assert l.output_shape == (3, 2), "Expected output shape differ"
+
+    l.input_size = (4, 5)
+    l.compile()
+
+    assert l.output_shape == l.input_shape, "Input, output shape differ"
+    assert l.output_shape == (3, 4, 5), "Expected output shape differ"
+    print("relu_shape_test() passed\n")
+
+
 if __name__ == "__main__":
     relu_num_grad_test()
     dense_relu_multi_num_grad_bias_test()
     multi_dense_relu_num_grad_weight_test()
+    relu_shape_test()

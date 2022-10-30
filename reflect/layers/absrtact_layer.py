@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from reflect.compiled_object import CompiledObject
 from reflect import np
+from reflect.utils.misc import to_tuple
 
 class AbstractLayer(CompiledObject):
     """
@@ -16,7 +17,7 @@ class AbstractLayer(CompiledObject):
     output = None
     dldx = None         # gradient of loss with respect to input
     batch_size = None
-    name = None
+    name = None         # not unique name
 
     def __init__(self, input_size, output_size, batch_size):
         self.batch_size = batch_size
@@ -26,8 +27,8 @@ class AbstractLayer(CompiledObject):
     def compile(self):
         super().compile()
         # compile shapes
-        self.input_shape = (self.batch_size, self.input_size)
-        self.output_shape = (self.batch_size, self.output_size)
+        self.input_shape = (self.batch_size, ) + to_tuple(self.input_size)
+        self.output_shape = (self.batch_size, ) + to_tuple(self.output_size)
 
         # compile output
         self.output = np.zeros(shape=self.output_shape)
@@ -38,8 +39,8 @@ class AbstractLayer(CompiledObject):
         """
         Check if layer is up-to-date with layer arguments
         """
-        input_size_match = self.input_shape == (self.batch_size, self.input_size)
-        output_size_match = self.output_shape == (self.batch_size, self.output_size)
+        input_size_match = self.input_shape == (self.batch_size, ) + to_tuple(self.input_size)
+        output_size_match = self.output_shape == (self.batch_size, ) + to_tuple(self.output_size)
 
         return (self.output is not None 
                 and self.dldx is not None 
