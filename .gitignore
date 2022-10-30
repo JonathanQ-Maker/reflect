@@ -3,4 +3,4 @@ reflect.sln
 reflect.pyproj
 reflect.pyproj.user
 .vs
-**/__pycache__/
+__pycache__/
