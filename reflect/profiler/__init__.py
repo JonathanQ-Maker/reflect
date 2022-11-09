@@ -1,1 +1,1 @@
-from reflect.profiler.numerical_gradient import num_grad
+from reflect.profiler.gradient import num_grad, check_grad

@@ -1,7 +1,7 @@
 from reflect.layers import Dense
 import numpy as np
 from reflect.regularizers import L1, L2, L1L2
-from reflect.profiler import num_grad
+from reflect.profiler import num_grad, check_grad
 
 np.set_printoptions(precision=3)
 np.random.seed(0)
@@ -296,19 +296,16 @@ def dense_num_grad_test():
 
     def forward(W):
         l.param.weight = W
-        return np.sum((target - l.forward(input))**2) / 2
+        out = np.sum((target - l.forward(input))**2) / 2
+        l.param.weight = weight_original
+        return out
 
-    grad = num_grad(forward, weight)
-
-    l.param.weight = weight_original
     residual = target - l.forward(input)
     l.backprop(residual)
     real_grad = -l.dldw
 
-    assert np.all(grad != real_grad), "grad == real_grad strictly"
-    assert grad is not real_grad, "grad and real_grad is the same instance"
-    print(f"grad:\n{grad}\n\nreal_grad:\n{real_grad}")
-    assert np.allclose(grad, real_grad, atol = 1e-4), "num_grad and real gradient differ"
+    passed, msg = check_grad(forward, weight, real_grad)
+    assert passed, msg
     print("dense_num_grad_test() passed\n")
 
 def multi_dense_num_grad_test():
@@ -331,19 +328,15 @@ def multi_dense_num_grad_test():
 
     def forward(W):
         l1.param.weight = W
-        return np.sum((target - l2.forward(l1.forward(input)))**2) / 2
+        out = np.sum((target - l2.forward(l1.forward(input)))**2) / 2
+        l1.param.weight = weight_original
+        return out
 
-    grad = num_grad(forward, weight)
-
-    l1.param.weight = weight_original
     residual = target - l2.forward(l1.forward(input))
     l1.backprop(l2.backprop(residual))
     real_grad = -l1.dldw
 
-    assert np.all(grad != real_grad), "grad == real_grad strictly"
-    assert grad is not real_grad, "grad and real_grad is the same instance"
-    print(f"grad:\n{grad}\n\nreal_grad:\n{real_grad}")
-    assert np.allclose(grad, real_grad, atol = 1e-4), "num_grad and real gradient differ"
+    passed, msg = check_grad(forward, weight, real_grad)
     print("multi_dense_num_grad_test() passed\n")
 
 def multi_dense_num_grad_bias_test():
@@ -366,20 +359,32 @@ def multi_dense_num_grad_bias_test():
 
     def forward(b):
         l1.param.bias = b
-        return np.sum((target - l2.forward(l1.forward(input)))**2) / 2
+        out = np.sum((target - l2.forward(l1.forward(input)))**2) / 2
+        l1.param.bias = bias_original
+        return out
 
-    grad = num_grad(forward, bias)
-
-    l1.param.bias = bias_original
     residual = target - l2.forward(l1.forward(input))
     l1.backprop(l2.backprop(residual))
     real_grad = -l1.dldb
 
-    assert np.all(grad != real_grad), "grad == real_grad strictly"
-    assert grad is not real_grad, "grad and real_grad is the same instance"
-    print(f"grad:\n{grad}\n\nreal_grad:\n{real_grad}")
-    assert np.allclose(grad, real_grad, atol = 1e-4), "num_grad and real gradient differ"
+    passed, msg = check_grad(forward, bias, real_grad)
     print("multi_dense_num_grad_bias_test() passed\n")
+
+def dense_grad_scale_test():
+    input_size = 3
+    output_size = 2
+    batch_size = 2
+
+
+    l = Dense(input_size, output_size, batch_size, "xavier")
+    l.compile(gen_param=True)
+
+    input = np.ones((batch_size, input_size))
+
+    l.forward(input)
+    l.backprop(np.ones((batch_size, output_size)))
+    assert np.all(l.dldw == np.full(l.dldw.shape, batch_size)), "scale does not match expected"
+    print("dense_grad_scale_test() passed")
 
 
 
@@ -400,3 +405,4 @@ if (__name__ == "__main__"):
     dense_num_grad_test()
     multi_dense_num_grad_test()
     multi_dense_num_grad_bias_test()
+    dense_grad_scale_test()

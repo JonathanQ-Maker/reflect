@@ -32,21 +32,26 @@ class AbstractLayer(CompiledObject):
 
         # compile output
         self.output = np.zeros(shape=self.output_shape)
+        self.dldx = np.zeros(shape=self.input_shape)
 
         self.name = "UNKNOWN"
 
     def is_compiled(self):
         """
         Check if layer is up-to-date with layer arguments
+
+        # of check items should be the same as # of compile items
         """
         input_size_match = self.input_shape == (self.batch_size, ) + to_tuple(self.input_size)
         output_size_match = self.output_shape == (self.batch_size, ) + to_tuple(self.output_size)
+        dldx_ok = self.dldx is not None and self.dldx.shape == self.input_shape
+        output_ok = self.output is not None and self.output.shape == self.output_shape
 
-        return (self.output is not None 
-                and self.dldx is not None 
-                and self.name is not None
+        return (self.name is not None
                 and input_size_match
-                and output_size_match)
+                and output_size_match
+                and dldx_ok
+                and output_ok)
 
     def forward(self, X):
         return 0
@@ -54,10 +59,11 @@ class AbstractLayer(CompiledObject):
     def backprop(self, dldz):
         return 1
 
-    def apply_grad(self, step):
-        pass
-
     def attribute_to_str(self):
         return (f"name:           {self.name}\n" 
         + f"batch size:     {self.batch_size}\n"
-        + f"compiled:       {self.is_compiled()}\n")
+        + f"compiled:       {self.is_compiled()}\n"
+        + f"output size:    {self.output_size}\n"
+        + f"output_shape:   {self.output_shape}\n"
+        + f"input size:     {self.input_size}\n"
+        + f"input_shape:    {self.input_shape}\n")

@@ -12,7 +12,6 @@ class Relu(AbstractLayer):
     def compile(self):
         self.output_size = self.input_size
         super().compile()
-        self.dldx = np.zeros(self.input_shape)
     
     def is_compiled(self):
         dldx_ok = self.dldx is not None and self.dldx.shape == self.input_shape

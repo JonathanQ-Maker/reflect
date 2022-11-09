@@ -31,3 +31,11 @@ class ParametricLayer(AbstractLayer):
 
     def compile(self, gen_param=True):
         super().compile()
+
+    def apply_grad(self, step):
+        """
+        Applies graident to params.
+
+        Note: gradients over batch axis is summed
+        """
+        pass

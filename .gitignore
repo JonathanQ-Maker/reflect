@@ -1,5 +1,6 @@
 env/
 reflect.sln
+reflect.pyperf
 reflect.pyproj
 reflect.pyproj.user
 .vs

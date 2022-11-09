@@ -1,3 +1,4 @@
+from __future__ import annotations
 from reflect.layers.parametric_layer import ParametricLayer
 from reflect import np
 import copy
@@ -26,7 +27,6 @@ class Dense(ParametricLayer):
 
         # compile gradient
         self.dldw = np.zeros(shape=self.weight_shape)
-        self.dldx = np.zeros(shape=self.input_shape)
         self.dldb = np.zeros(shape=self.output_size)
 
         # compule regularizer
@@ -35,12 +35,19 @@ class Dense(ParametricLayer):
             self.regularizer.compile()
 
         self.name = f"Dense {self.output_size}"
-        self.apply_param(self.create_param())
+        if (gen_param):
+            self.apply_param(self.create_param())
 
     def is_compiled(self):
+        weight_shape_match = self.weight_shape == (self.input_size, self.output_size)
         dldw_ok = self.dldw is not None and self.dldw.shape == self.weight_shape
         dldb_ok = self.dldb is not None and self.dldb.shape[0] == self.output_size
-        return super().is_compiled() and dldw_ok and dldb_ok
+
+        regularizer_ok = True
+        if (self.regularizer is not None):
+            regularizer_ok = self.regularizer.is_compiled()
+
+        return super().is_compiled() and weight_shape_match and regularizer_ok and dldw_ok and dldb_ok
         
 
     def init_weight(self, param, type, weight_bias = 0):
@@ -70,7 +77,7 @@ class Dense(ParametricLayer):
         param.regularizer = copy.deepcopy(self.regularizer)
         return param
 
-    def param_compatible(self, param):
+    def param_compatible(self, param: DenseParam):
         bias_ok = (param.bias is not None) and param.bias.shape[0] == self.output_size
         weight_ok = (param.weight is not None) and param.weight.shape == self.weight_shape
         regularizer_ok = True
@@ -115,10 +122,6 @@ class Dense(ParametricLayer):
 
     def attribute_to_str(self):
         return (super().attribute_to_str()
-        + f"output size:    {self.output_size}\n"
-        + f"output_shape:   {self.output_shape}\n"
-        + f"input size:     {self.input_size}\n"
-        + f"input_shape:    {self.input_shape}\n"
         + f"weight init:    {self.weight_type}\n"
         + f"max weight:     {self.param.weight.max()}\n"
         + f"min weight:     {self.param.weight.min()}\n"
