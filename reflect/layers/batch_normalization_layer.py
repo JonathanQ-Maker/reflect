@@ -150,6 +150,19 @@ class BatchNorm(ParametricLayer):
         return np.multiply(self.residual, self.factor, out=self.output)
 
         
+    # # batch normalization gradient for x of shape (n, d) and (b, h, w, c)
+    # # used as reference for debugging
+    #def dfdx(x, gamma, beta, dout, eps=1e-2):
+    #    axis = tuple(i for i in range(len(x.shape)-1))
+    #    m = np.mean(x, axis=axis)
+    #    s = np.std(x, axis=axis) + eps
+    #    n = np.prod(x.shape[:-1])
+    #    res = x - m
+    #    res_mean = np.sum(res, axis=axis) / n
+    #    dx = (gamma / s) * (dout \
+    #    - (np.sum(dout * (1 - res_mean/s), axis=axis) \
+    #    + np.sum(dout * res, axis=axis) * (res + res_mean)/(s**2))/n)
+    #    return dx
 
     def backprop(self, dldz):
         """
