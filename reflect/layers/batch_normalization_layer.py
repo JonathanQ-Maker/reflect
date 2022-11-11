@@ -1,7 +1,6 @@
 from __future__ import annotations
 from reflect.layers.parametric_layer import ParametricLayer
 from reflect import np
-import time
 
 class BatchNorm(ParametricLayer):
 
@@ -124,9 +123,7 @@ class BatchNorm(ParametricLayer):
             std = self.std
             mean = self.mean
             
-            start = time.time()
             np.std(self.input, axis=self.axis, out=self.std)
-            delta = time.time() - start
             np.mean(self.input, axis=self.axis, out=self.mean)
             
             # calc expoential moving average for test time statistics
