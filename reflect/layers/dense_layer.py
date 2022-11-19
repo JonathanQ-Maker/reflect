@@ -29,7 +29,7 @@ class Dense(ParametricLayer):
         self.dldw = np.zeros(shape=self.weight_shape)
         self.dldb = np.zeros(shape=self.output_size)
 
-        # compule regularizer
+        # compile regularizer
         if (self.regularizer is not None):
             self.regularizer.shape = self.weight_shape
             self.regularizer.compile()
@@ -63,6 +63,8 @@ class Dense(ParametricLayer):
             scale = 1 / np.sqrt(self.input_size) # Xavier init
         elif (type == "he"):
             scale = np.sqrt(2 / self.input_size) # he init, for relus
+        else:
+            raise ValueError(f'no such weight type "{type}"')
 
 
 
