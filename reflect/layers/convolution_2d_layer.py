@@ -254,7 +254,7 @@ class Convolve2D(ParametricLayer):
                                                strides=strides,
                                                writeable=False)
         np.copyto(self.output, np.einsum('BHWhwC,khwC->BHWk', view, self.param.kernel, 
-                  optimize=True))
+                  optimize="optimal"))
         np.add(self.output, self.param.bias, out=self.output)
         return self.output
 
@@ -264,11 +264,13 @@ class Convolve2D(ParametricLayer):
 
         Make copy of dldk, dldb, dldx if intended to be modified
         """
+        # compute dldx gradient
         np.copyto(self.base_view, dldz)
         np.copyto(self.dldx, 
                   np.einsum('BHWhwK,KhwC->BHWC', self.base_window_view, 
                          self.kernel_rot180, optimize="optimal"))
 
+        # compute dldk gradient
         strides = self.dldz_window_stride * self.input.itemsize
         view = np.lib.stride_tricks.as_strided(self.input, 
                                                shape=self.dldz_window_shape, 
@@ -276,7 +278,11 @@ class Convolve2D(ParametricLayer):
                                                writeable=False)
         np.copyto(self.dldk, 
                   np.einsum('BHWhwC,BKhw->KHWC', view, 
-                            self.dldz_kernel_view, optimize=True))
+                            self.dldz_kernel_view, optimize="optimal"))
+
+        # compute dldb gradient
+        np.sum(dldz, axis=(0, 1, 2), out=self.dldb)
+
         return self.dldx
 
     def apply_grad(self, step, dldw=None, dldb=None):
@@ -284,8 +290,10 @@ class Convolve2D(ParametricLayer):
             dldw = self.dldw
         if (dldb is None):
             dldb = self.dldb
-        np.add(self.param.weight, step * dldw, out=self.param.weight)  # weight update
-        np.add(self.param.bias, step * dldb, out=self.param.bias)      # bias update
+        # weight update
+        np.add(self.param.weight, step * dldw, out=self.param.weight)
+        # bias update
+        np.add(self.param.bias, step * dldb, out=self.param.bias)
 
     def __str__(self):
         return self.attribute_to_str()

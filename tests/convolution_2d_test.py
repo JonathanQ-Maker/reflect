@@ -17,7 +17,6 @@ class Convolve2DTest(unittest.TestCase):
         strides = (s_h, s_w)
 
         input = np.random.normal(size=input_shape)
-        kernel = np.random.randn(K, h, w, C)
 
 
         l = Convolve2D(input_size, kernel_size, K, B, strides, "xavier")
@@ -32,6 +31,7 @@ class Convolve2DTest(unittest.TestCase):
         self.assertTrue(passed, msg)
         
         original_k = l.param.kernel
+        kernel = np.copy(l.param.kernel)
         def func(k):
             l.param.kernel = k
             return l.forward(input)
@@ -39,9 +39,19 @@ class Convolve2DTest(unittest.TestCase):
         l.forward(input)
         l.backprop(dldz)
 
-
-
         passed, msg = check_grad(func, kernel, l.dldk, dldz)
+        self.assertTrue(passed, msg)
+
+        original_b = l.param.bias
+        bias = np.copy(l.param.bias)
+        def func(b):
+            l.param.bias = b
+            return l.forward(input)
+        l.param.bias = original_b
+        l.forward(input)
+        l.backprop(dldz)
+
+        passed, msg = check_grad(func, bias, l.dldb, dldz)
         self.assertTrue(passed, msg)
 
 

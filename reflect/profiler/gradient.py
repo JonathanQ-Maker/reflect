@@ -15,7 +15,7 @@ def num_grad(func, X, dout=1, delta=1e-5):
     X = np.copy(X)
     for i in range(X.size):
         X.flat[i] += delta
-        f_X_delta = func(X)
+        f_X_delta = func(X).copy()
         np.subtract(f_X_delta, f_X, out=buffer)
         np.multiply(buffer, dout, out=buffer)
         grad.flat[i] = np.sum(buffer) / delta
