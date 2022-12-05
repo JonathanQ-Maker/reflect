@@ -3,6 +3,7 @@ from reflect.layers.parametric_layer import ParametricLayer
 from reflect import np
 from reflect.utils.misc import to_tuple, conv_size, in_conv_size
 import copy
+from math import ceil
 
 class Convolve2D(ParametricLayer):
 
@@ -26,8 +27,12 @@ class Convolve2D(ParametricLayer):
     kernel_size = None          # single filter size, (height, width)
     kernels = 1                 # number of kernels
     weight_type = None          # weight initialization type
-    strides = (1, 1)            # (stride y, stride x)
+    strides = (1, 1)            # (stride y, stride x), convolution strides
     pad = False                 # zero pad input to maintain spatial dimention
+    padded_input_shape = None   # input shape after padded
+    padded_input = None         # array used as input for padded inputs
+    pad_size = None             # (pad_H_top, pad_H_bot, pad_W_left, pad_W_right) amount padded along H and W axis
+    padded_input_view = None    # padded_input view without padding, used for input paste
 
     kernel_regularizer = None
     bias_regularizer = None
@@ -51,10 +56,20 @@ class Convolve2D(ParametricLayer):
         self.kernels                = kernels
 
     def compile(self, gen_param=True):
-        self.output_size = self.comp_output_shape()[1:]
-        super().compile(gen_param)
-
         self.kernel_shape = self.comp_kernel_shape()
+        self.input_shape = (self.batch_size, ) + to_tuple(self.input_size)
+        if (self.pad):
+            self.padded_input_shape, self.pad_size = self.comp_padded_input()
+            self.padded_input = np.zeros(shape=self.padded_input_shape)
+            _, H, W, _ = self.padded_input_shape
+            pad_H_top, pad_H_bot, pad_W_left, pad_W_right = self.pad_size
+            self.padded_input_view = self.padded_input[:, pad_H_top:H-pad_H_bot, pad_W_left:W-pad_W_right, :]
+        self.output_size = self.comp_output_shape()[1:]
+        self.output_shape = (self.batch_size, ) + to_tuple(self.output_size)
+
+        # compile output
+        self.output = np.zeros(shape=self.output_shape)
+        self.dldx = np.zeros(shape=self.input_shape)
 
         # compile gradient
         self.dldk = np.zeros(shape=self.kernel_shape)
@@ -88,6 +103,11 @@ class Convolve2D(ParametricLayer):
                 and base_ok)
 
     def comp_output_shape(self):
+        if (self.pad):
+            return (self.batch_size, 
+                    conv_size(self.padded_input_shape[1], self.kernel_size[0], self.strides[0]),
+                    conv_size(self.padded_input_shape[2], self.kernel_size[1], self.strides[1]),
+                    self.kernels)
         return (self.batch_size, 
                 conv_size(self.input_size[0], self.kernel_size[0], self.strides[0]),
                 conv_size(self.input_size[1], self.kernel_size[1], self.strides[1]),
@@ -110,6 +130,8 @@ class Convolve2D(ParametricLayer):
 
         # forward view attributes
         B, H, W, C = self.input_shape
+        if (self.pad):
+            B, H, W, C = self.padded_input_shape
         K, h, w, _ = self.kernel_shape
         stride_h, stride_w = self.strides
 
@@ -120,6 +142,18 @@ class Convolve2D(ParametricLayer):
                         conv_size(W, w, stride_w), 
                         h, w, C)
         return window_stride, window_shape
+
+    def comp_padded_input(self):
+        B, H, W, C = self.input_shape
+        _, h, w, _ = self.kernel_shape
+        stride_h, stride_w = self.strides
+        in_H = in_conv_size(H, h, stride_h)
+        in_W = in_conv_size(W, w, stride_w)
+        padded_input_shape = (B, in_H, in_W, C)
+        
+        # (pad_H_top, pad_H_bot, pad_W_left, pad_W_right)
+        pad_size = ((in_H - H)//2, ceil((in_H - H)/2), (in_W - W)//2, ceil((in_W - W)/2))
+        return padded_input_shape, pad_size
 
     def init_regularizers(self):
         # kernel
@@ -155,6 +189,8 @@ class Convolve2D(ParametricLayer):
         base matrix used to compute dldx, dldk
         """
         B, H, W, C = self.input_shape
+        if (self.pad):
+            B, H, W, C = self.padded_input_shape
         K, h, w, _ = self.kernel_shape
         pad_h = h - 1
         pad_w = w - 1
@@ -208,6 +244,7 @@ class Convolve2D(ParametricLayer):
         param = Convolve2DParam()
         self.init_kernel(param, self.weight_type, 0)
         param.bias = np.zeros(self.kernels)
+        param.pad = self.pad
         if (self.kernel_regularizer is not None):
             param.kernel_regularizer = copy.deepcopy(self.kernel_regularizer)
             param.kernel_regularizer.compile()
@@ -234,7 +271,9 @@ class Convolve2D(ParametricLayer):
         regularizer_ok = self.regularizers_ok(param.kernel_regularizer, 
                                               param.bias_regularizer)
 
-        return bias_ok and kernel_ok and regularizer_ok
+        pad_ok = param.pad is not None and param.pad == self.pad
+
+        return bias_ok and kernel_ok and regularizer_ok and pad_ok
 
     def apply_param(self, param):
         super().apply_param(param)
@@ -249,6 +288,10 @@ class Convolve2D(ParametricLayer):
         """
         self.input = X
         strides = self.window_stride * self.input.itemsize
+
+        if (self.param.pad):
+            np.copyto(self.padded_input_view, X)
+            X = self.padded_input
         view = np.lib.stride_tricks.as_strided(X, 
                                                shape=self.window_shape, 
                                                strides=strides,
@@ -266,19 +309,23 @@ class Convolve2D(ParametricLayer):
         """
         # compute dldx gradient
         np.copyto(self.base_view, dldz)
-        np.copyto(self.dldx, 
-                  np.einsum('BHWhwK,KhwC->BHWC', self.base_window_view, 
-                         self.kernel_rot180, optimize="optimal"))
+        dldx = np.einsum('BHWhwK,KhwC->BHWC', self.base_window_view, 
+                         self.kernel_rot180, optimize="optimal")
 
         # compute dldk gradient
         strides = self.dldz_window_stride * self.input.itemsize
-        view = np.lib.stride_tricks.as_strided(self.input, 
+        view = np.lib.stride_tricks.as_strided(self.padded_input, 
                                                shape=self.dldz_window_shape, 
                                                strides=strides,
                                                writeable=False)
-        np.copyto(self.dldk, 
-                  np.einsum('BHWhwC,BKhw->KHWC', view, 
-                            self.dldz_kernel_view, optimize="optimal"))
+        dldk = np.einsum('BHWhwC,BKhw->KHWC', view, 
+                            self.dldz_kernel_view, optimize="optimal")
+        if (self.pad):
+            _, H, W, _ = self.padded_input_shape
+            pad_H_top, pad_H_bot, pad_W_left, pad_W_right = self.pad_size
+            dldx = dldx[:, pad_H_top:H-pad_H_bot, pad_W_left:W-pad_W_right, :]
+        np.copyto(self.dldx, dldx)
+        np.copyto(self.dldk, dldk)
 
         # compute dldb gradient
         np.sum(dldz, axis=(0, 1, 2), out=self.dldb)
@@ -315,6 +362,7 @@ class Convolve2D(ParametricLayer):
 class Convolve2DParam():
     kernel = None
     weight_type = None
+    pad = None
 
     bias = None
     kernel_regularizer = None
