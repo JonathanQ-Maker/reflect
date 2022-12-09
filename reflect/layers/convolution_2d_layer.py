@@ -95,12 +95,22 @@ class Convolve2D(ParametricLayer):
         window_view_ok = np.all(stride == self.window_stride) and shape == self.window_shape
         base_ok = self.base_view is not None and self.base_view.shape == self.output_shape
 
+        pad_ok = not self.pad
+        if (self.pad):
+            padded_input_shape, pad_size = self.comp_padded_input()
+            pad_ok = (self.pad_size == pad_size
+                      and self.padded_input_shape == padded_input_shape
+                      and self.padded_input is not None 
+                      and self.padded_input.shape == self.padded_input_shape
+                      and self.padded_input_view is not None)
+
         return (super().is_compiled() 
                 and kernel_shape_match 
                 and regularizer_ok 
                 and dldk_ok and dldb_ok
                 and window_view_ok
-                and base_ok)
+                and base_ok
+                and pad_ok)
 
     def comp_output_shape(self):
         if (self.pad):
@@ -287,11 +297,11 @@ class Convolve2D(ParametricLayer):
         Input instance will be kept and expected not to be modified between forward and backward pass
         """
         self.input = X
-        strides = self.window_stride * self.input.itemsize
 
         if (self.param.pad):
             np.copyto(self.padded_input_view, X)
             X = self.padded_input
+        strides = self.window_stride * X.itemsize
         view = np.lib.stride_tricks.as_strided(X, 
                                                shape=self.window_shape, 
                                                strides=strides,
@@ -313,8 +323,11 @@ class Convolve2D(ParametricLayer):
                          self.kernel_rot180, optimize="optimal")
 
         # compute dldk gradient
-        strides = self.dldz_window_stride * self.input.itemsize
-        view = np.lib.stride_tricks.as_strided(self.padded_input, 
+        input = self.input
+        if (self.pad):
+            input = self.padded_input
+        strides = self.dldz_window_stride * input.itemsize
+        view = np.lib.stride_tricks.as_strided(input, 
                                                shape=self.dldz_window_shape, 
                                                strides=strides,
                                                writeable=False)
