@@ -336,13 +336,13 @@ class Convolve2D(ParametricLayer):
         if (self._pad):
             B, H, W, C = self._padded_input_shape
         K, h, w, _ = self._kernel_shape
+        stride_h, stride_w = self._strides
         pad_h   = h - 1
         pad_w   = w - 1
         in_h    = in_conv_size(H, h, 1)
         in_w    = in_conv_size(W, w, 1)
-        out_h   = conv_size(H, h, self._strides[0])
-        out_w   = conv_size(W, w, self._strides[1])
-        stride_h, stride_w = self._strides
+        out_h   = conv_size(H, h, stride_h)
+        out_w   = conv_size(W, w, stride_w)
 
         # base
         base_shape = (B, in_h, in_w, K)
@@ -484,6 +484,7 @@ class Convolve2D(ParametricLayer):
             expected to execute only once after forward
         """
         # compute dldx gradient
+        # NOTE: convolution on stride spaced dldz with 180 rotated kernel computes dldx
         np.copyto(self._base_view, dldz)
         dldx = np.einsum('BHWhwK,KhwC->BHWC', self._base_window_view, 
                          self._kernel_rot180, optimize="optimal")
@@ -497,6 +498,7 @@ class Convolve2D(ParametricLayer):
                                                shape=self._dldz_window_shape, 
                                                strides=strides,
                                                writeable=False)
+        # NOTE: stride 1 convolution on input with modified kernel shape computes dldk
         dldk = np.einsum('BHWhwC,BKhw->KHWC', view, 
                             self._dldz_kernel_view, optimize="optimal")
         if (self._pad):
@@ -525,9 +527,9 @@ class Convolve2D(ParametricLayer):
             dldk = self._dldk
         if (dldb is None):
             dldb = self._dldb
-        # weight update
+        step = step / self._batch_size
+        # kernel & bias update
         np.add(self.param.kernel, step * dldk, out=self.param.kernel)
-        # bias update
         np.add(self.param.bias, step * dldb, out=self.param.bias)
 
     def __str__(self):

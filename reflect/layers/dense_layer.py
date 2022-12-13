@@ -183,6 +183,8 @@ class Dense(ParametricLayer):
             dldw = self._dldw
         if (dldb is None):
             dldb = self._dldb
+
+        step = step / self._batch_size
         np.add(self.param.weight, step * dldw, out=self.param.weight)  # weight update
         np.add(self.param.bias, step * dldb, out=self.param.bias)      # bias update
 
