@@ -228,9 +228,9 @@ class DenseTest(unittest.TestCase):
         shape = (5, 3)
 
         weight = np.random.normal(size=shape)
-        regl1.shape = shape
-        regl2.shape = shape
-        regl1l2.shape = shape
+        regl1.compile(shape)
+        regl2.compile(shape)
+        regl1l2.compile(shape)
 
         l1_grad = regl1.gradient(weight)
         l2_grad = regl2.gradient(weight)
@@ -260,7 +260,6 @@ class DenseTest(unittest.TestCase):
         self.assertTrue(np.all(param.bias.shape == param2.bias.shape), "bias does not match")
         self.assertTrue(np.all(param.weight.shape == param2.weight.shape), "weights does not match")
         self.assertTrue(param.weight_type == param2.weight_type, "weight types does not match")
-        self.assertTrue(param.regularizer is not param2.regularizer, "regularizer is the same insatnce")
 
         self.assertTrue(l.param_compatible(param), "generated param is not compatible")
 

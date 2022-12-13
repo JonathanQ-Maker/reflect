@@ -298,11 +298,11 @@ class Convolve2D(ParametricLayer):
     def init_regularizers(self):
         # kernel
         if (self._kernel_regularizer is not None):
-            self._kernel_regularizer.shape = self._kernel_shape
+            self._kernel_regularizer.compile(self._kernel_shape)
 
         # bias
         if (self._bias_regularizer is not None):
-            self._bias_regularizer.shape = to_tuple(self._kernels)
+            self._bias_regularizer.compile(to_tuple(self._kernels))
 
     def init_kernel(self, param, type, weight_bias = 0):
         """
@@ -390,23 +390,16 @@ class Convolve2D(ParametricLayer):
         self.init_kernel(param, self._weight_type, 0)
         param.bias  = np.zeros(self._kernels)
         param.pad   = self._pad
-
-        if (self._kernel_regularizer is not None):
-            param.kernel_regularizer = copy.deepcopy(self._kernel_regularizer)
-            param.kernel_regularizer.compile()
-        if (self._bias_regularizer is not None):
-            param.bias_regularizer = copy.deepcopy(self._bias_regularizer)
-            param.bias_regularizer.compile()
         return param
 
     def regularizers_ok(self, kernel_regularizer, bias_regularizer):
         kernel_regularizer_ok = True
         if (kernel_regularizer is not None):
-            kernel_regularizer_ok = kernel_regularizer.shape == self._kernel_shape
+            kernel_regularizer_ok = kernel_regularizer.is_compiled()
 
         bias_regularizer_ok = True
         if (bias_regularizer is not None):
-            bias_regularizer_ok = bias_regularizer.shape == (self._kernels, )
+            bias_regularizer_ok = bias_regularizer.is_compiled()
 
         return kernel_regularizer_ok and bias_regularizer_ok
 
@@ -423,13 +416,9 @@ class Convolve2D(ParametricLayer):
 
         bias_ok = (param.bias is not None) and param.bias.shape[0] == self._kernels
         kernel_ok = (param.kernel is not None) and param.kernel.shape == self._kernel_shape
-
-        regularizer_ok = self.regularizers_ok(param.kernel_regularizer, 
-                                              param.bias_regularizer)
-
         pad_ok = param.pad is not None and param.pad == self._pad
 
-        return bias_ok and kernel_ok and regularizer_ok and pad_ok
+        return bias_ok and kernel_ok and pad_ok
 
     def apply_param(self, param: Convolve2DParam):
         """
@@ -511,6 +500,12 @@ class Convolve2D(ParametricLayer):
         # compute dldb gradient
         np.sum(dldz, axis=(0, 1, 2), out=self._dldb)
 
+        # add regularizer
+        if (self._kernel_regularizer is not None):
+            np.add(self._dldk, self._kernel_regularizer.gradient(self.param.kernel), out=self._dldk)
+        if (self._bias_regularizer is not None):
+            np.add(self._dldb, self._bias_regularizer.gradient(self.param.bias), out=self._dldb)
+
         return self._dldx
 
     def apply_grad(self, step, dldk=None, dldb=None):
@@ -538,10 +533,10 @@ class Convolve2D(ParametricLayer):
     def attribute_to_str(self):
         return (super().attribute_to_str()
         + f"weight init:    {self._weight_type}\n"
-        + f"max weight:     {self.param.weight.max()}\n"
-        + f"min weight:     {self.param.weight.min()}\n"
-        + f"weight std:     {np.std(self.param.weight)}\n"
-        + f"weight mean:    {np.mean(self.param.weight)}\n")
+        + f"max kernel:     {self.param.kernel.max()}\n"
+        + f"min kernel:     {self.param.kernel.min()}\n"
+        + f"kernel std:     {np.std(self.param.kernel)}\n"
+        + f"kernel mean:    {np.mean(self.param.kernel)}\n")
 
 
 
@@ -555,5 +550,3 @@ class Convolve2DParam():
     pad = None
 
     bias = None
-    kernel_regularizer = None
-    bias_regularizer = None

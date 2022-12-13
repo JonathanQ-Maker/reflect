@@ -64,8 +64,7 @@ class Dense(ParametricLayer):
 
         # compile regularizer
         if (self._regularizer is not None):
-            self._regularizer.shape = self._weight_shape
-            self._regularizer.compile()
+            self._regularizer.compile(self._weight_shape)
 
         self.name = f"Dense {self._output_size}"
         if (gen_param):
@@ -113,7 +112,6 @@ class Dense(ParametricLayer):
         param = DenseParam()
         self.init_weight(param, self.weight_type, 0)
         param.bias = np.zeros(self._output_size)
-        param.regularizer = copy.deepcopy(self._regularizer)
         return param
 
     def param_compatible(self, param: DenseParam):
@@ -129,12 +127,7 @@ class Dense(ParametricLayer):
 
         bias_ok = (param.bias is not None) and param.bias.shape[0] == self._output_size
         weight_ok = (param.weight is not None) and param.weight.shape == self._weight_shape
-        regularizer_ok = True
-        if (param.regularizer is not None):
-            regularizer_ok = (param.regularizer.shape == self._weight_shape 
-                              and param.regularizer.is_compiled())
-
-        return bias_ok and weight_ok and regularizer_ok
+        return bias_ok and weight_ok
     
     def forward(self, X):
         """
@@ -210,4 +203,3 @@ class DenseParam():
     weight_type = None
 
     bias = None
-    regularizer = None

@@ -7,18 +7,39 @@ class L2(CompiledObject):
     """
 
 
-    reg_coeff = 0
-    grad = None
-    shape = None
+    reg_coeff       = 0
+    _grad           = None
+    _readonly_grad  = None
+    _shape          = None
+
+    @property
+    def shape(self):
+        return self._shape
+            
+    @property
+    def grad(self):
+        return self._readonly_grad
 
     def __init__(self, reg_coeff):
         self.reg_coeff = reg_coeff
 
     def gradient(self, weight):
-        return np.multiply(weight, self.reg_coeff, out=self.grad)
+        """
+        calculate gradient of L2 norm with respect to weight
 
-    def compile(self):
-        self.grad = np.zeros(self.shape)
+        Args:
+            weight: weight matrix
+
+        NOTE: weight matrix must match size and must be compiled
+        """
+        np.multiply(weight, self.reg_coeff, out=self._grad)
+        return self._readonly_grad
+
+    def compile(self, shape: tuple):
+        self._shape = shape
+        self._grad = np.zeros(self._shape)
+        self._readonly_grad = self._grad.view()
+        self._readonly_grad.flags.writeable = False
 
     def is_compiled(self):
-        return self.shape is not None and self.grad is not None and self.grad.shape == self.shape
+        return self._shape is not None and self._grad is not None and self._grad.shape == self._shape
