@@ -8,31 +8,82 @@ class AbstractLayer(CompiledObject):
     Base layer class
     """
 
-    input_size = None
-    input_shape = None
+    # public variables
+    _input_size         = None
+    _input_shape        = None # (batch size, ) + input_size
 
-    output_size = None
-    output_shape = None
+    _output_size        = None
+    _output_shape       = None # (batch size, ) + output_size
+    _output             = None
+    _readonly_output    = None # readonly output view
 
-    output = None
-    dldx = None         # gradient of loss with respect to input
-    batch_size = None
-    name = None         # not unique name
+    _dldx               = None # gradient of loss with respect to input
+    _readonly_dldx      = None # readonly dldx view
+
+    _batch_size         = None # mini-batch size
+    name                = None # non-unique name
+
+
+    @property
+    def output(self):
+        return self._readonly_output
+
+    @property
+    def dldx(self):
+        return self._readonly_dldx
+
+    @property
+    def input_size(self):
+        return self._input_size
+
+    @input_size.setter
+    def input_size(self, size):
+        self._input_size = size
+
+    @property
+    def input_shape(self):
+        return self._input_shape
+
+    @property
+    def output_size(self):
+        return self._output_size
+
+    @output_size.setter
+    def output_size(self, size):
+        self._output_size = size
+
+    @property
+    def output_shape(self):
+        return self._output_shape
+
+    @property
+    def batch_size(self):
+        return self._batch_size
+
+    @batch_size.setter
+    def batch_size(self, size):
+        self._batch_size = size
 
     def __init__(self, input_size, output_size, batch_size):
-        self.batch_size = batch_size
-        self.input_size = input_size
-        self.output_size = output_size
+        self._batch_size    = batch_size
+        self._input_size    = input_size
+        self._output_size   = output_size
 
     def compile(self):
         super().compile()
         # compile shapes
-        self.input_shape = (self.batch_size, ) + to_tuple(self.input_size)
-        self.output_shape = (self.batch_size, ) + to_tuple(self.output_size)
+        self._input_shape   = (self._batch_size, ) + to_tuple(self._input_size)
+        self._output_shape  = (self._batch_size, ) + to_tuple(self._output_size)
 
-        # compile output
-        self.output = np.zeros(shape=self.output_shape)
-        self.dldx = np.zeros(shape=self.input_shape)
+        # compile arrays
+        self._output    = np.zeros(shape=self._output_shape)
+        self._dldx      = np.zeros(shape=self._input_shape)
+
+        # compile read only views
+        self._readonly_output = self._output.view()
+        self._readonly_dldx   = self._dldx.view()
+        self._readonly_output.flags.writeable = False
+        self._readonly_dldx.flags.writeable = False
 
         self.name = "UNKNOWN"
 
@@ -42,10 +93,10 @@ class AbstractLayer(CompiledObject):
 
         # of check items should be the same as # of compile items
         """
-        input_size_match = self.input_shape == (self.batch_size, ) + to_tuple(self.input_size)
-        output_size_match = self.output_shape == (self.batch_size, ) + to_tuple(self.output_size)
-        dldx_ok = self.dldx is not None and self.dldx.shape == self.input_shape
-        output_ok = self.output is not None and self.output.shape == self.output_shape
+        input_size_match = self._input_shape == (self._batch_size, ) + to_tuple(self._input_size)
+        output_size_match = self._output_shape == (self._batch_size, ) + to_tuple(self._output_size)
+        dldx_ok = self._dldx is not None and self._dldx.shape == self._input_shape
+        output_ok = self._output is not None and self._output.shape == self._output_shape
 
         return (self.name is not None
                 and input_size_match
@@ -54,16 +105,40 @@ class AbstractLayer(CompiledObject):
                 and output_ok)
 
     def forward(self, X):
+        """
+        forward pass with input
+
+        Args:
+            X: input
+
+        Returns: 
+            output
+
+        Make copy of output if intended to be modified
+        Input instance will be kept and expected not to be modified between forward and backward pass
+        """
         return 0
 
     def backprop(self, dldz):
+        """
+        backward pass to compute the gradients
+
+        Args:
+            dldz: gradient of loss with respect to output
+
+        Returns: 
+            dldx, gradient of loss with respect to input
+
+        Note:
+            expected to execute only once after forward
+        """
         return 1
 
     def attribute_to_str(self):
         return (f"name:           {self.name}\n" 
-        + f"batch size:     {self.batch_size}\n"
+        + f"batch size:     {self._batch_size}\n"
         + f"compiled:       {self.is_compiled()}\n"
-        + f"output size:    {self.output_size}\n"
-        + f"output_shape:   {self.output_shape}\n"
-        + f"input size:     {self.input_size}\n"
-        + f"input_shape:    {self.input_shape}\n")
+        + f"output size:    {self._output_size}\n"
+        + f"output_shape:   {self._output_shape}\n"
+        + f"input size:     {self._input_size}\n"
+        + f"input_shape:    {self._input_shape}\n")

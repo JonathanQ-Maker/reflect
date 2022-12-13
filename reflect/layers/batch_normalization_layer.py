@@ -4,75 +4,105 @@ from reflect import np
 
 class BatchNorm(ParametricLayer):
 
-    input = None
+    _input          = None
 
-    dldg = None     # gradient of loss with respect to gamma (output std)
-    dldb = None     # gradient of loss with respect to beta (output mean)
+    _dldg           = None # gradient of loss with respect to gamma also output std
+    _dldb           = None # gradient of loss with respect to beta also output mean
+    _readonly_dldg  = None
+    _readonly_dldb  = None
 
-    axis = None     # axis to normalized over
-    momentum = None # momentum for expoential moving averaging
-    epsilon = None  # numerical stabilizer
+    _axis           = None # axis to normalized over
+    momentum        = None # momentum for expoential moving averaging (default: 0.9)
+    epsilon         = None # numerical stabilizer (default: 1e-5)
     
-    # intermediate terms
-    std = None      # input std along axis
-    mean = None     # input mean along axis
-    offset = None
-    factor = None
-    residual = None
-    residual_mean = None
-    n = None
+    # intermediate terms, name not nessesarily accurate. 
+    # maybe more accurate to call intermediate buffers
+    _std            = None # input std along axis
+    _mean           = None # input mean along axis
+    _offset         = None
+    _factor         = None
+    _residual       = None
+    _residual_mean  = None
+    _n              = None
 
 
-    param_shape = None  # shared shape between gamma and beta
-    approx_dldx = None
+    _param_shape    = None # shared shape between gamma and beta
+    _approx_dldx    = None # bool, use approx dldx. Reduceses backprop complexity and more accurate n -> inf
+
+
+
+    
+    @property
+    def input(self):
+        if (self._input is None):
+            return None
+        view = self._input.view()
+        view.flags.writeable = False
+        return view
+
+    @property
+    def dldg(self):
+        return self._readonly_dldg
+
+    @property
+    def dldb(self):
+        return self._readonly_dldb
+
+    @property
+    def axis(self):
+        return self._axis
 
 
     def __init__(self, input_size = 1, batch_size = 1, momentum=0.9, epsilon=1e-5, approx_dldx=False):
         super().__init__(input_size, input_size, batch_size)
         self.momentum = momentum
         self.epsilon = epsilon
-        self.approx_dldx = approx_dldx
+        self._approx_dldx = approx_dldx
 
     def compile(self, gen_param=True):
-        self.output_size = self.input_size
+        self._output_size = self._input_size
         super().compile(gen_param)
-        self.axis = tuple(i for i in range(len(self.input_shape)-1))
-        self.param_shape = (self.output_shape[-1], )
+        self._axis = tuple(i for i in range(len(self._input_shape)-1))
+        self._param_shape = (self._output_shape[-1], )
 
         # compile intermediate terms
-        self.std = np.zeros(shape=self.param_shape)
-        self.mean = np.zeros(shape=self.param_shape)
-        self.offset = np.zeros(shape=self.param_shape)
-        self.factor = np.zeros(shape=self.param_shape)
-        self.residual = np.zeros(shape=self.input_shape)
-        self.residual_mean = np.zeros(shape=self.param_shape)
-        self.n = np.prod(self.input_shape[:-1])
+        self._std           = np.zeros(shape=self._param_shape)
+        self._mean          = np.zeros(shape=self._param_shape)
+        self._offset        = np.zeros(shape=self._param_shape)
+        self._factor        = np.zeros(shape=self._param_shape)
+        self._residual      = np.zeros(shape=self._input_shape)
+        self._residual_mean = np.zeros(shape=self._param_shape)
+        self._n             = np.prod(self._input_shape[:-1])
 
         # compile gradient
-        self.dldg = np.zeros(shape=self.param_shape)
-        self.dldb = np.zeros(shape=self.param_shape)
+        self._dldg          = np.zeros(shape=self._param_shape)
+        self._dldb          = np.zeros(shape=self._param_shape)
+        self._readonly_dldg = self._dldg.view()
+        self._readonly_dldb = self._dldb.view()
+        self._readonly_dldg.flags.writeable = False
+        self._readonly_dldb.flags.writeable = False
 
-        self.name = f"BatchNorm"
+        self._name = f"BatchNorm"
         if (gen_param):
             self.apply_param(self.create_param())
 
     def is_compiled(self):
-        axis_ok = (self.input_shape is not None 
-                   and self.axis == tuple(i for i in range(len(self.input_shape)-1)))
-        gamma_shape_match = (self.output_shape is not None 
-                             and self.param_shape == (self.output_shape[-1], ))
+        axis_ok = (self._input_shape is not None 
+                   and self._axis == tuple(i for i in range(len(self._input_shape)-1)))
+        gamma_shape_match = (self._output_shape is not None 
+                             and self._param_shape == (self._output_shape[-1], ))
 
         # intermediate terms
-        std_ok = self.std is not None and self.std.shape == self.param_shape
-        mean_ok = self.mean is not None and self.mean.shape == self.param_shape
-        offset_ok = self.offset is not None and self.offset.shape == self.param_shape
-        factor_ok = self.factor is not None and self.factor.shape == self.param_shape
-        dldg_ok = self.dldg is not None and self.dldg.shape == self.param_shape
-        dldb_ok = self.dldb is not None and self.dldb.shape == self.param_shape
-        residual_ok = (self.residual is not None 
-                       and self.residual.shape == self.input_shape)
-        residual_mean_ok = (self.residual_mean is not None 
-                            and self.residual_mean.shape == self.param_shape)
+        std_ok      = self._std is not None and self._std.shape == self._param_shape
+        mean_ok     = self._mean is not None and self._mean.shape == self._param_shape
+        offset_ok   = self._offset is not None and self._offset.shape == self._param_shape
+        factor_ok   = self._factor is not None and self._factor.shape == self._param_shape
+        dldg_ok     = self._dldg is not None and self._dldg.shape == self._param_shape
+        dldb_ok     = self._dldb is not None and self._dldb.shape == self._param_shape
+        residual_ok = (self._residual is not None 
+                       and self._residual.shape == self._input_shape)
+        residual_mean_ok = (self._residual_mean is not None 
+                            and self._residual_mean.shape == self._param_shape)
         momentum_ok = (self.momentum is not None 
                        and self.momentum <= 1 
                        and self.momentum > 0)
@@ -92,18 +122,18 @@ class BatchNorm(ParametricLayer):
     def create_param(self):
         super().create_param()
         param = BatchNormParam()
-        param.gamma = np.ones(self.param_shape)
-        param.beta = np.zeros(self.param_shape)
-        param.momentum = self.momentum
-        param.epsilon = self.epsilon
+        param.gamma     = np.ones(self._param_shape)
+        param.beta      = np.zeros(self._param_shape)
+        param.momentum  = self.momentum
+        param.epsilon   = self.epsilon
 
-        param.std = np.ones(self.param_shape)
-        param.mean = np.zeros(self.param_shape)
+        param.std       = np.ones(self._param_shape)
+        param.mean      = np.zeros(self._param_shape)
         return param
 
     def param_compatible(self, param: BatchNormParam):
-        gamma_ok = param.gamma is not None and param.gamma.shape == self.param_shape
-        beta_ok = param.beta is not None and param.beta.shape == self.param_shape
+        gamma_ok = param.gamma is not None and param.gamma.shape == self._param_shape
+        beta_ok = param.beta is not None and param.beta.shape == self._param_shape
         momentum_ok = (param.momentum is not None 
                        and param.momentum <= 1 
                        and param.momentum > 0)
@@ -116,35 +146,35 @@ class BatchNorm(ParametricLayer):
         Make copy of output if intended to be modified
         Input instance will be kept and expected not to be modified between forward and backward pass
         """
-        self.input = X
+        self._input = X
         std = self.param.std
         mean = self.param.mean
         if (training):
-            std = self.std
-            mean = self.mean
+            std     = self._std
+            mean    = self._mean
             
-            np.std(self.input, axis=self.axis, out=self.std)
-            np.mean(self.input, axis=self.axis, out=self.mean)
+            np.std(self._input, axis=self._axis, out=self._std)
+            np.mean(self._input, axis=self._axis, out=self._mean)
             
             # calc expoential moving average for test time statistics
             
             # running std
             np.multiply(self.param.momentum, self.param.std, out=self.param.std)
-            np.multiply(1 - self.param.momentum, std, out=self.factor)
-            np.add(self.param.std, self.factor, out=self.param.std)
+            np.multiply(1 - self.param.momentum, std, out=self._factor)
+            np.add(self.param.std, self._factor, out=self.param.std)
 
             # running mean
             np.multiply(self.param.momentum, self.param.mean, out=self.param.mean)
-            np.multiply(1 - self.param.momentum, mean, out=self.factor)
-            np.add(self.param.mean, self.factor, out=self.param.mean)
+            np.multiply(1 - self.param.momentum, mean, out=self._factor)
+            np.add(self.param.mean, self._factor, out=self.param.mean)
 
-        np.add(std, self.param.epsilon, out=self.std)
+        np.add(std, self.param.epsilon, out=self._std)
 
-        np.divide(self.param.gamma, self.std, out=self.factor)
-        np.divide(self.param.beta, self.factor, out=self.offset)
-        np.subtract(mean, self.offset, out=self.offset)
-        np.subtract(self.input, self.offset, out=self.residual)
-        return np.multiply(self.residual, self.factor, out=self.output)
+        np.divide(self.param.gamma, self._std, out=self._factor)
+        np.divide(self.param.beta, self._factor, out=self._offset)
+        np.subtract(mean, self._offset, out=self._offset)
+        np.subtract(self._input, self._offset, out=self._residual)
+        return np.multiply(self._residual, self._factor, out=self._output)
 
         
     # # batch normalization gradient for x of shape (n, d) and (b, h, w, c)
@@ -170,49 +200,49 @@ class BatchNorm(ParametricLayer):
         """
 
         # dldb
-        np.sum(dldz, axis=self.axis, out=self.dldb)
+        np.sum(dldz, axis=self._axis, out=self._dldb)
 
-        if (self.approx_dldx):
+        if (self._approx_dldx):
             # approximate dldx
-            np.multiply(self.factor, dldz, out=self.dldx)
+            np.multiply(self._factor, dldz, out=self._dldx)
 
             # dldg
-            np.subtract(self.input, self.mean, self.residual)
-            np.multiply(self.residual, dldz, out=self.residual)
-            np.sum(self.residual, axis=self.axis, out=self.offset)
-            np.divide(self.offset, self.std, out=self.dldg)
-            return self.dldx
+            np.subtract(self._input, self._mean, self._residual)
+            np.multiply(self._residual, dldz, out=self._residual)
+            np.sum(self._residual, axis=self._axis, out=self._offset)
+            np.divide(self._offset, self._std, out=self._dldg)
+            return self._dldx
 
         # dldx
-        np.subtract(self.input, self.mean, out=self.residual)
-        np.sum(self.residual, axis=self.axis, out=self.residual_mean)
-        np.divide(self.residual_mean, self.n, out=self.residual_mean)
+        np.subtract(self._input, self._mean, out=self._residual)
+        np.sum(self._residual, axis=self._axis, out=self._residual_mean)
+        np.divide(self._residual_mean, self._n, out=self._residual_mean)
 
-        np.divide(self.residual_mean, self.std, out=self.offset)
-        np.subtract(1, self.offset, out=self.offset)
-        np.multiply(dldz, self.offset, out=self.dldx)
-        np.sum(self.dldx, axis=self.axis, out=self.mean)
+        np.divide(self._residual_mean, self._std, out=self._offset)
+        np.subtract(1, self._offset, out=self._offset)
+        np.multiply(dldz, self._offset, out=self._dldx)
+        np.sum(self._dldx, axis=self._axis, out=self._mean)
 
-        np.multiply(dldz, self.residual, out=self.dldx)
-        np.sum(self.dldx, axis=self.axis, out=self.offset)
-        np.divide(self.offset, self.std, out=self.dldg)     # dldg
-        np.divide(self.dldg, self.std, out=self.offset)
+        np.multiply(dldz, self._residual, out=self._dldx)
+        np.sum(self._dldx, axis=self._axis, out=self._offset)
+        np.divide(self._offset, self._std, out=self._dldg)     # dldg
+        np.divide(self._dldg, self._std, out=self._offset)
 
-        np.add(self.residual, self.residual_mean, self.dldx)
-        np.multiply(self.offset, self.dldx, out=self.dldx)
+        np.add(self._residual, self._residual_mean, self._dldx)
+        np.multiply(self._offset, self._dldx, out=self._dldx)
 
-        np.add(self.dldx, self.mean, out=self.dldx)
-        np.divide(self.dldx, self.n, out=self.dldx)
-        np.subtract(dldz, self.dldx, out=self.dldx)
-        np.multiply(self.factor, self.dldx, out=self.dldx)
+        np.add(self._dldx, self._mean, out=self._dldx)
+        np.divide(self._dldx, self._n, out=self._dldx)
+        np.subtract(dldz, self._dldx, out=self._dldx)
+        np.multiply(self._factor, self._dldx, out=self._dldx)
   
-        return self.dldx
+        return self._dldx
 
     def apply_grad(self, step, dldg=None, dldb=None):
         if (dldg is None):
-            dldg = self.dldg
+            dldg = self._dldg
         if (dldb is None):
-            dldb = self.dldb
+            dldb = self._dldb
         np.add(self.param.gamma, step * dldg, out=self.param.gamma)     # gamma update
         np.add(self.param.beta, step * dldb, out=self.param.beta)       # beta update
 
