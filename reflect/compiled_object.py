@@ -16,5 +16,8 @@ class CompiledObject(ABC):
     def is_compiled(self):
         """
         Check if inetrnal variables are up-to-date
+
+        Returns:
+            bool, true for compiled
         """
-        pass
+        return True
