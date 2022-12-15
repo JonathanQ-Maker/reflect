@@ -20,7 +20,7 @@ class L2(CompiledObject):
     def grad(self):
         return self._readonly_grad
 
-    def __init__(self, reg_coeff):
+    def __init__(self, reg_coeff=0.001):
         self.reg_coeff = reg_coeff
 
     def gradient(self, weight):

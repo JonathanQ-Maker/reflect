@@ -1,7 +1,7 @@
 from __future__ import annotations
 from reflect.layers.parametric_layer import ParametricLayer
 from reflect import np
-import copy
+from reflect.regularizers import L2
 
 class Dense(ParametricLayer):
 
@@ -45,7 +45,7 @@ class Dense(ParametricLayer):
         return view
 
     def __init__(self, input_size = 1, output_size = 1, batch_size = 1, weight_type = "he", 
-                 regularizer=None):
+                 regularizer=L2()):
         super().__init__(input_size, output_size, batch_size)
         self.weight_type  = weight_type
         self._regularizer  = regularizer

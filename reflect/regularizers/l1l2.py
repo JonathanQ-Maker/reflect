@@ -22,7 +22,7 @@ class L1L2(CompiledObject):
     def grad(self):
         return self._readonly_grad
 
-    def __init__(self, reg_coeff_l1, reg_coeff_l2):
+    def __init__(self, reg_coeff_l1=0.001, reg_coeff_l2=0.001):
         self.reg_coeff_l1 = reg_coeff_l1
         self.reg_coeff_l2 = reg_coeff_l2
 
