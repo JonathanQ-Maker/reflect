@@ -9,15 +9,19 @@ class Momentum(AbstractOptimizer):
     grad_t = step * v_t
 
     NOTE: 
-        real velocity equation is 
+        sometimes velocity equation is 
 
             v_t = (1 - friction) * v_(t-1) + friction * grad
 
-        but was reduced to 
+        but this version was used
 
             v_t = (1 - friction) * v_(t-1) + grad
 
-        such that it is computationally more efficient
+        because it is computationally more efficient.
+        The second equation is the same as the first if the
+        second equation was scaled by a factor of 1 / friction.
+        See: 
+        https://ai.stackexchange.com/questions/25152/how-are-these-equations-of-sgd-with-momentum-equivalent
     """
 
     _velocity           = None
@@ -49,7 +53,7 @@ class Momentum(AbstractOptimizer):
 
     def gradient(self, grad):
         """
-        Optimizer processed gradient
+        Calculate optimizer processed gradient
 
         Args:
             grad: vanilla gradient to be processed

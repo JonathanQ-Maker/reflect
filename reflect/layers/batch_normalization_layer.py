@@ -12,8 +12,8 @@ class BatchNorm(ParametricLayer):
     _readonly_dldb  = None
 
     _axis           = None # axis to normalized over
-    momentum        = None # momentum for expoential moving averaging (default: 0.9)
-    epsilon         = None # numerical stabilizer (default: 1e-5)
+    momentum        = 0.9  # momentum for expoential moving averaging, (0, 1]
+    epsilon         = 1e-5 # numerical stabilizer, (0, inf)
     
     # intermediate terms, name not nessesarily accurate. 
     # maybe more accurate to call intermediate buffers

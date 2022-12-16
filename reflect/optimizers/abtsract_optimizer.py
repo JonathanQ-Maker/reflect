@@ -20,7 +20,7 @@ class AbstractOptimizer(CompiledObject):
     @abstractmethod
     def gradient(self, grad):
         """
-        Optimizer processed gradient
+        Calculate optimizer processed gradient
 
         Args:
             grad: vanilla gradient to be processed
@@ -29,6 +29,8 @@ class AbstractOptimizer(CompiledObject):
             optimizer processed gradient
 
         NOTE: grad matrix must match size and must be compiled
+
+        see class doc for more info
         """
         pass
 
