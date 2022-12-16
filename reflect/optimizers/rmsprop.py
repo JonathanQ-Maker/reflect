@@ -5,7 +5,7 @@ class RMSprop(AbstractOptimizer):
     """
     Root Mean Squared Propagation Optimizer
 
-    grad_sqrd_t = (1 - decay) * grad_sqrd_(t-1) + grad**2
+    grad_sqrd_t = decay * [(1 - decay) * grad_sqrd_(t-1) + grad**2]
     grad_t = step * grad / sqrt(grad_sqrd_t + epsilon)
 
 
@@ -18,9 +18,9 @@ class RMSprop(AbstractOptimizer):
 
             grad_sqrd_t = (1 - decay) * grad_sqrd_(t-1) + grad**2
 
-        such that it is computationally more efficient uses less memory.
-        The second equation is the same as the first if the 
-        second equation was scaled by a factor of 1 / decay.
+        such that it is more memory efficient.
+        The first equation is the same as the second if the
+        first equation was scaled by a factor of 1 / friction.
         See:
         https://ai.stackexchange.com/questions/25152/how-are-these-equations-of-sgd-with-momentum-equivalent
     """
@@ -55,11 +55,12 @@ class RMSprop(AbstractOptimizer):
         return (super().is_compiled
                 and grad_ok)
 
-    def gradient(self, grad):
+    def gradient(self, step, grad):
         """
-        Optimizer processed gradient
+        Calculate optimizer processed gradient
 
         Args:
+            step: gradient descent step size
             grad: vanilla gradient to be processed
 
         Returns:
@@ -73,9 +74,11 @@ class RMSprop(AbstractOptimizer):
         np.square(grad, out=self._grad)
         np.multiply(1.0 - self.decay, self._grad_squared, out=self._grad_squared)
         np.add(self._grad_squared, self._grad, out=self._grad_squared)
+        np.multiply(self.decay, self._grad_squared, out=self._grad_squared)
         np.sqrt(self._grad_squared, out=self._grad)
         np.add(self._grad, self.epsilon, out=self._grad)
         np.divide(grad, self._grad, out=self._grad)
+        np.multiply(step, self._grad, out=self._grad)
         return self._readonly_grad
 
     

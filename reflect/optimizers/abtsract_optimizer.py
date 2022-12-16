@@ -18,11 +18,12 @@ class AbstractOptimizer(CompiledObject):
         return 1
 
     @abstractmethod
-    def gradient(self, grad):
+    def gradient(self, step, grad):
         """
         Calculate optimizer processed gradient
 
         Args:
+            step: gradient descent step size
             grad: vanilla gradient to be processed
 
         Returns:

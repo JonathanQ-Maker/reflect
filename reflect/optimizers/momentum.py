@@ -6,7 +6,7 @@ class Momentum(AbstractOptimizer):
     Momentum Optimizer 
 
     v_t = (1 - friction) * v_(t-1) + grad
-    grad_t = step * v_t
+    grad_t = (step * friction) * v_t
 
     NOTE: 
         sometimes velocity equation is 
@@ -17,9 +17,9 @@ class Momentum(AbstractOptimizer):
 
             v_t = (1 - friction) * v_(t-1) + grad
 
-        because it is computationally more efficient.
-        The second equation is the same as the first if the
-        second equation was scaled by a factor of 1 / friction.
+        because it is computationally more efficient and use less memory.
+        The first equation is the same as the second if the
+        first equation was scaled by a factor of 1 / friction.
         See: 
         https://ai.stackexchange.com/questions/25152/how-are-these-equations-of-sgd-with-momentum-equivalent
     """
@@ -51,11 +51,12 @@ class Momentum(AbstractOptimizer):
         return (super().is_compiled
                 and velocity_ok)
 
-    def gradient(self, grad):
+    def gradient(self, step, grad):
         """
         Calculate optimizer processed gradient
 
         Args:
+            step: gradient descent step size
             grad: vanilla gradient to be processed
 
         Returns:
@@ -68,6 +69,7 @@ class Momentum(AbstractOptimizer):
 
         np.multiply(1.0-self.friction, self._velocity, out=self._velocity)
         np.add(self._velocity, grad, out=self._velocity)
+        np.multiply(self.friction * step, self._velocity, out=self._velocity)
         return self._readonly_velocity
 
     
