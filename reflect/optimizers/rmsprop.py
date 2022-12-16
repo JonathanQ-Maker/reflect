@@ -5,8 +5,9 @@ class RMSprop(AbstractOptimizer):
     """
     Root Mean Squared Propagation Optimizer
 
-    grad_sqrd_t = decay * [(1 - decay) * grad_sqrd_(t-1) + grad**2]
-    grad_t = step * grad / sqrt(grad_sqrd_t + epsilon)
+    grad_sqrd_t = (1 - decay) * grad_sqrd_(t-1) + grad**2
+    unbiased = decay / (1 - (1 - decay)**t) * grad_sqrd_t
+    grad_t = step * grad / (sqrt(unbiased) + epsilon)
 
 
     NOTE: 
@@ -28,8 +29,9 @@ class RMSprop(AbstractOptimizer):
     _grad           = None  # 
     _readonly_grad  = None
     _grad_squared   = None  # running average gradient squared
-    decay           = 0     # percent to decay of old gradients, [0, 1)
+    decay           = 0.0   # percent to decay/remove of old gradients, [0, 1)
     epsilon         = 1e-7  # numerical stability coefficient, (0, inf)
+    _correction     = 1.0   # correction term for unbiased/early gradients
 
     @property
     def grad(self):
@@ -38,14 +40,14 @@ class RMSprop(AbstractOptimizer):
         """
         return self._readonly_grad
 
-    def __init__(self, decay=0.9, epsilon=1e-7):
+    def __init__(self, decay=0.99, epsilon=1e-7):
         self.decay      = decay
         self.epsilon    = epsilon
 
     def compile(self, shape):
         super().compile(shape)
-
-        self._grad = np.zeros(self._shape)
+        self._grad_squared  = np.zeros(self._shape)
+        self._grad          = np.zeros(self._shape)
         self._readonly_grad = self._grad.view()
         self._readonly_grad.flags.writeable = False
 
@@ -71,11 +73,12 @@ class RMSprop(AbstractOptimizer):
         see class doc for more info
         """
 
+        self._correction *= 1.0 - self.decay
         np.square(grad, out=self._grad)
         np.multiply(1.0 - self.decay, self._grad_squared, out=self._grad_squared)
         np.add(self._grad_squared, self._grad, out=self._grad_squared)
-        np.multiply(self.decay, self._grad_squared, out=self._grad_squared)
-        np.sqrt(self._grad_squared, out=self._grad)
+        np.multiply(self.decay / (1.0 - self._correction), self._grad_squared, out=self._grad)
+        np.sqrt(self._grad, out=self._grad)
         np.add(self._grad, self.epsilon, out=self._grad)
         np.divide(grad, self._grad, out=self._grad)
         np.multiply(step, self._grad, out=self._grad)

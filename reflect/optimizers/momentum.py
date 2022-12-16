@@ -6,7 +6,8 @@ class Momentum(AbstractOptimizer):
     Momentum Optimizer 
 
     v_t = (1 - friction) * v_(t-1) + grad
-    grad_t = (step * friction) * v_t
+    unbiased = v_t / (1 - (1 - friction)**t)
+    grad_t = (step * friction) * unbiased
 
     NOTE: 
         sometimes velocity equation is 
@@ -25,8 +26,10 @@ class Momentum(AbstractOptimizer):
     """
 
     _velocity           = None
-    _readonly_velocity  = None
-    friction            = 0
+    _grad               = None
+    _readonly_grad      = None
+    friction            = 0.0   # percent to decay/remove of old velocity, [0, 1)
+    _correction         = 1.0   # correction term for unbiased/early gradients
 
     @property
     def grad(self):
@@ -35,15 +38,16 @@ class Momentum(AbstractOptimizer):
         """
         return self._readonly_velocity
 
-    def __init__(self, friction=0.01):
+    def __init__(self, friction=0.1):
         self.friction = friction
 
     def compile(self, shape):
         super().compile(shape)
 
-        self._velocity = np.zeros(self._shape)
-        self._readonly_velocity = self._velocity.view()
-        self._readonly_velocity.flags.writeable = False
+        self._velocity  = np.zeros(self._shape)
+        self._grad      = np.zeros(self._shape)
+        self._readonly_grad = self._grad.view()
+        self._readonly_grad.flags.writeable = False
 
     def is_compiled(self):
         velocity_ok = (self._velocity is not None 
@@ -67,9 +71,10 @@ class Momentum(AbstractOptimizer):
         see class doc for more info
         """
 
+        self._correction *= (1.0 - self.friction)
         np.multiply(1.0-self.friction, self._velocity, out=self._velocity)
         np.add(self._velocity, grad, out=self._velocity)
-        np.multiply(self.friction * step, self._velocity, out=self._velocity)
-        return self._readonly_velocity
+        np.multiply(self.friction * step / (1.0 - self._correction), self._velocity, out=self._grad)
+        return self._readonly_grad
 
     
