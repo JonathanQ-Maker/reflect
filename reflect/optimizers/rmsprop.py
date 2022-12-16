@@ -20,7 +20,7 @@ class RMSprop(AbstractOptimizer):
 
         such that it is more memory efficient.
         The first equation is the same as the second if the
-        first equation was scaled by a factor of 1 / friction.
+        first equation was scaled by a factor of 1 / decay.
         See:
         https://ai.stackexchange.com/questions/25152/how-are-these-equations-of-sgd-with-momentum-equivalent
     """
