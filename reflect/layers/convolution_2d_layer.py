@@ -2,7 +2,6 @@ from __future__ import annotations
 from reflect.layers.parametric_layer import ParametricLayer
 from reflect import np
 from reflect.utils.misc import to_tuple, conv_size, in_conv_size
-from reflect.regularizers import L2
 from math import ceil
 
 class Convolve2D(ParametricLayer):
@@ -160,8 +159,8 @@ class Convolve2D(ParametricLayer):
                  strides = (1, 1),
                  weight_type = "he",
                  pad = False,
-                 kernel_regularizer=L2(),
-                 bias_regularizer=L2()):
+                 kernel_regularizer=None,
+                 bias_regularizer=None):
         super().__init__(input_size, None, batch_size)
         self._weight_type            = weight_type
         self._kernel_regularizer     = kernel_regularizer

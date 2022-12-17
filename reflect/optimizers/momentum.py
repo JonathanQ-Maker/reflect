@@ -71,9 +71,10 @@ class Momentum(AbstractOptimizer):
         see class doc for more info
         """
 
-        self._correction *= (1.0 - self.friction)
+        self._correction *= 1.0 - self.friction
         np.multiply(1.0-self.friction, self._velocity, out=self._velocity)
         np.add(self._velocity, grad, out=self._velocity)
+
         np.multiply(self.friction * step / (1.0 - self._correction), self._velocity, out=self._grad)
         return self._readonly_grad
 

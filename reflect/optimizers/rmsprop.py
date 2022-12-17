@@ -40,7 +40,7 @@ class RMSprop(AbstractOptimizer):
         """
         return self._readonly_grad
 
-    def __init__(self, decay=0.99, epsilon=1e-7):
+    def __init__(self, decay=0.01, epsilon=1e-7):
         self.decay      = decay
         self.epsilon    = epsilon
 
@@ -77,6 +77,7 @@ class RMSprop(AbstractOptimizer):
         np.square(grad, out=self._grad)
         np.multiply(1.0 - self.decay, self._grad_squared, out=self._grad_squared)
         np.add(self._grad_squared, self._grad, out=self._grad_squared)
+
         np.multiply(self.decay / (1.0 - self._correction), self._grad_squared, out=self._grad)
         np.sqrt(self._grad, out=self._grad)
         np.add(self._grad, self.epsilon, out=self._grad)
