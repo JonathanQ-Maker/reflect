@@ -52,8 +52,13 @@ class Momentum(AbstractOptimizer):
     def is_compiled(self):
         velocity_ok = (self._velocity is not None 
                        and self._velocity.shape == self._shape)
+        grad_ok = (self._grad is not None 
+                       and self._grad.shape == self._shape
+                       and self._readonly_grad is not None
+                       and self._readonly_grad.shape == self._shape)
         return (super().is_compiled
-                and velocity_ok)
+                and velocity_ok
+                and grad_ok)
 
     def gradient(self, step, grad):
         """

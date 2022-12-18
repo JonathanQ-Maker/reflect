@@ -52,8 +52,12 @@ class RMSprop(AbstractOptimizer):
         self._readonly_grad.flags.writeable = False
 
     def is_compiled(self):
+        grad_squared_ok = (self._grad_squared is not None 
+                           and self._grad_squared.shape == self._shape)
         grad_ok = (self._grad is not None 
-                       and self._grad.shape == self._shape)
+                       and self._grad.shape == self._shape
+                       and self._readonly_grad is not None
+                       and self._readonly_grad.shape == self._shape)
         return (super().is_compiled
                 and grad_ok)
 
