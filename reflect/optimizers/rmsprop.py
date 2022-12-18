@@ -11,7 +11,7 @@ class RMSprop(AbstractOptimizer):
 
 
     NOTE: 
-        real grad_sqrd_t equation is 
+        original grad_sqrd_t equation is 
 
             grad_sqrd_t = (1 - decay) * grad_sqrd_(t-1) + decay * grad**2
 
