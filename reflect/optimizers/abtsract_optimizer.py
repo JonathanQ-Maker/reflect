@@ -4,7 +4,9 @@ from reflect import np
 
 class AbstractOptimizer(CompiledObject):
     
-    _shape = None
+    _shape          = None
+    _grad           = None
+    _readonly_grad  = None
 
     @property
     def shape(self):
@@ -15,7 +17,7 @@ class AbstractOptimizer(CompiledObject):
         """
         calculated gradient
         """
-        return 1
+        return self._readonly_grad
 
     @abstractmethod
     def gradient(self, step, grad):
@@ -36,10 +38,19 @@ class AbstractOptimizer(CompiledObject):
         pass
 
     def compile(self, shape):
-        self._shape = shape
+        self._shape         = shape
+        self._grad          = np.zeros(self._shape)
+        self._readonly_grad = self._grad.view()
+
+        self._readonly_grad.flags.writeable = False
 
     def is_compiled(self):
-        return self._shape is not None
+        grad_ok = (self._grad is not None 
+                       and self._grad.shape == self._shape
+                       and self._readonly_grad is not None
+                       and self._readonly_grad.shape == self._shape)
+        return (self._shape is not None 
+                and grad_ok)
 
 
 

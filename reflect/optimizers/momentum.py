@@ -26,39 +26,21 @@ class Momentum(AbstractOptimizer):
     """
 
     _velocity           = None
-    _grad               = None
-    _readonly_grad      = None
     friction            = 0.0   # percent to decay/remove of old velocity, [0, 1)
     _correction         = 1.0   # correction term for unbiased/early gradients
-
-    @property
-    def grad(self):
-        """
-        calculated gradient
-        """
-        return self._readonly_velocity
 
     def __init__(self, friction=0.1):
         self.friction = friction
 
     def compile(self, shape):
         super().compile(shape)
-
         self._velocity  = np.zeros(self._shape)
-        self._grad      = np.zeros(self._shape)
-        self._readonly_grad = self._grad.view()
-        self._readonly_grad.flags.writeable = False
 
     def is_compiled(self):
         velocity_ok = (self._velocity is not None 
                        and self._velocity.shape == self._shape)
-        grad_ok = (self._grad is not None 
-                       and self._grad.shape == self._shape
-                       and self._readonly_grad is not None
-                       and self._readonly_grad.shape == self._shape)
         return (super().is_compiled
-                and velocity_ok
-                and grad_ok)
+                and velocity_ok)
 
     def gradient(self, step, grad):
         """

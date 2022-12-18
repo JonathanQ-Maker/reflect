@@ -26,19 +26,10 @@ class RMSprop(AbstractOptimizer):
         https://ai.stackexchange.com/questions/25152/how-are-these-equations-of-sgd-with-momentum-equivalent
     """
 
-    _grad           = None  # 
-    _readonly_grad  = None
     _grad_squared   = None  # running average gradient squared
     decay           = 0.0   # percent to decay/remove of old gradients, [0, 1)
     epsilon         = 1e-7  # numerical stability coefficient, (0, inf)
     _correction     = 1.0   # correction term for unbiased/early gradients
-
-    @property
-    def grad(self):
-        """
-        calculated gradient
-        """
-        return self._readonly_grad
 
     def __init__(self, decay=0.01, epsilon=1e-7):
         self.decay      = decay
@@ -47,19 +38,12 @@ class RMSprop(AbstractOptimizer):
     def compile(self, shape):
         super().compile(shape)
         self._grad_squared  = np.zeros(self._shape)
-        self._grad          = np.zeros(self._shape)
-        self._readonly_grad = self._grad.view()
-        self._readonly_grad.flags.writeable = False
 
     def is_compiled(self):
         grad_squared_ok = (self._grad_squared is not None 
                            and self._grad_squared.shape == self._shape)
-        grad_ok = (self._grad is not None 
-                       and self._grad.shape == self._shape
-                       and self._readonly_grad is not None
-                       and self._readonly_grad.shape == self._shape)
         return (super().is_compiled
-                and grad_ok)
+                and grad_squared_ok)
 
     def gradient(self, step, grad):
         """
