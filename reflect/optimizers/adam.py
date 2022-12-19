@@ -64,11 +64,11 @@ class Adam(AbstractOptimizer):
                        and self._velocity.shape == self._shape)
         grad_squared_ok = (self._grad_squared is not None 
                            and self._grad_squared.shape == self._shape)
-        return (super().is_compiled
+        return (super().is_compiled()
                 and velocity_ok
                 and grad_squared_ok)
 
-    def gradient(self, step, grad):
+    def gradient(self, step: float, grad):
         """
         Calculate optimizer processed gradient
 

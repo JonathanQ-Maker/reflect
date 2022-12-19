@@ -1,6 +1,7 @@
 import numpy as np
 from reflect.layers import Convolve2D, Convolve2DParam
 from reflect.profiler import num_grad, check_grad
+from reflect.optimizers import GradientDescent
 import time
 import unittest
 
@@ -19,7 +20,8 @@ class Convolve2DTest(unittest.TestCase):
         input = np.random.normal(size=input_shape)
 
 
-        l = Convolve2D(input_size, kernel_size, K, B, strides, "xavier")
+        l = Convolve2D(input_size, kernel_size, K, B, strides, "xavier", 
+                       kernel_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         l.compile(gen_param=True)
 
         dldz = np.random.normal(size=l.output_shape)
@@ -67,7 +69,8 @@ class Convolve2DTest(unittest.TestCase):
         input = np.random.normal(size=input_shape)
 
 
-        l = Convolve2D(input_size, kernel_size, K, B, strides, "xavier", pad=True)
+        l = Convolve2D(input_size, kernel_size, K, B, strides, "xavier", pad=True,
+                       kernel_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         l.compile(gen_param=True)
 
         self.assertTrue(l.output.shape[:-1] == l.input_shape[:-1], 

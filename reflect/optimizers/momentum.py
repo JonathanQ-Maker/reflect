@@ -39,10 +39,10 @@ class Momentum(AbstractOptimizer):
     def is_compiled(self):
         velocity_ok = (self._velocity is not None 
                        and self._velocity.shape == self._shape)
-        return (super().is_compiled
+        return (super().is_compiled()
                 and velocity_ok)
 
-    def gradient(self, step, grad):
+    def gradient(self, step: float, grad):
         """
         Calculate optimizer processed gradient
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 from reflect.layers.parametric_layer import ParametricLayer
 from reflect import np
+from reflect.optimizers import Adam
 
 class BatchNorm(ParametricLayer):
 
@@ -14,6 +15,8 @@ class BatchNorm(ParametricLayer):
     _axis           = None # axis to normalized over
     momentum        = 0.9  # momentum for expoential moving averaging, (0, 1]
     epsilon         = 1e-5 # numerical stabilizer, (0, inf)
+    gamma_optimizer = None
+    bias_optimizer  = None
     
     # intermediate terms, name not nessesarily accurate. 
     # maybe more accurate to call intermediate buffers
@@ -53,11 +56,21 @@ class BatchNorm(ParametricLayer):
         return self._axis
 
 
-    def __init__(self, input_size = 1, batch_size = 1, momentum=0.9, epsilon=1e-5, approx_dldx=False):
+    def __init__(self, 
+                 input_size         = 1, 
+                 batch_size         = 1, 
+                 momentum           = 0.9, 
+                 epsilon            = 1e-5, 
+                 approx_dldx        = False,
+                 gamma_optimizer    = Adam(),
+                 bias_optimizer     = Adam()):
+
         super().__init__(input_size, input_size, batch_size)
-        self.momentum = momentum
-        self.epsilon = epsilon
-        self._approx_dldx = approx_dldx
+        self.momentum           = momentum
+        self.epsilon            = epsilon
+        self._approx_dldx       = approx_dldx
+        self.gamma_optimizer    = gamma_optimizer
+        self.bias_optimizer     = bias_optimizer
 
     def compile(self, gen_param=True):
         self._output_size = self._input_size
@@ -81,6 +94,10 @@ class BatchNorm(ParametricLayer):
         self._readonly_dldb = self._dldb.view()
         self._readonly_dldg.flags.writeable = False
         self._readonly_dldb.flags.writeable = False
+
+        # compile optimizers
+        self.gamma_optimizer.compile(self._param_shape)
+        self.bias_optimizer.compile(self._param_shape)
 
         self._name = f"BatchNorm"
         if (gen_param):
@@ -106,6 +123,10 @@ class BatchNorm(ParametricLayer):
         momentum_ok = (self.momentum is not None 
                        and self.momentum <= 1 
                        and self.momentum > 0)
+        optimizers_ok = (self.gamma_optimizer is not None 
+                         and self.bias_optimizer is not None
+                         and self.gamma_optimizer.is_compiled() 
+                         and self.bias_optimizer.is_compiled())
         return (super().is_compiled() 
                 and axis_ok 
                 and gamma_shape_match
@@ -117,7 +138,8 @@ class BatchNorm(ParametricLayer):
                 and dldb_ok
                 and residual_ok
                 and residual_mean_ok
-                and momentum_ok)
+                and momentum_ok
+                and optimizers_ok)
 
     def create_param(self):
         super().create_param()
@@ -243,8 +265,14 @@ class BatchNorm(ParametricLayer):
             dldg = self._dldg
         if (dldb is None):
             dldb = self._dldb
-        np.add(self.param.gamma, step * dldg, out=self.param.gamma)     # gamma update
-        np.add(self.param.beta, step * dldb, out=self.param.beta)       # beta update
+
+        # gamma update
+        np.add(self.param.gamma, self.gamma_optimizer.gradient(step, dldg), 
+               out=self.param.gamma)
+
+        # beta update
+        np.add(self.param.beta, self.bias_optimizer.gradient(step, dldb), 
+               out=self.param.beta)
 
     def __str__(self):
         return self.attribute_to_str()

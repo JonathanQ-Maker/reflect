@@ -2,6 +2,7 @@ from reflect.layers import Dense
 import numpy as np
 from reflect.regularizers import L1, L2, L1L2
 from reflect.profiler import num_grad, check_grad
+from reflect.optimizers import GradientDescent
 import unittest
 
 np.set_printoptions(precision=3)
@@ -17,7 +18,8 @@ class DenseTest(unittest.TestCase):
         input_shape = (batch_size, input_size)
         output_shape = (batch_size, output_size)
 
-        l = Dense(input_size, output_size, batch_size, "xavier")
+        l = Dense(input_size, output_size, batch_size, "xavier", 
+                  weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         self.assertFalse(l.is_compiled(), "Dense layer should not be compiled")
         l.compile(gen_param=True)
 
@@ -59,7 +61,8 @@ class DenseTest(unittest.TestCase):
     
         layers = []
         for i in range(len(dimentions) - 1):
-            l = Dense(dimentions[i], dimentions[i + 1], batch_size, "xavier")
+            l = Dense(dimentions[i], dimentions[i + 1], batch_size, "xavier", 
+                      weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
             self.assertFalse(l.is_compiled(), "Dense layer should not be compiled")
             l.compile(gen_param=True)
             self.assertTrue(l.is_compiled(), f"Layer {i} is not compiled")
@@ -107,8 +110,10 @@ class DenseTest(unittest.TestCase):
         coeff = 0.5
 
         reg = L1(coeff)
-        l = Dense(input_size, output_size, batch_size, "xavier", reg)
-        ctrl = Dense(input_size, output_size, batch_size, "xavier")
+        l = Dense(input_size, output_size, batch_size, "xavier", reg, 
+                  weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
+        ctrl = Dense(input_size, output_size, batch_size, "xavier", 
+                     weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         self.assertFalse(l.is_compiled(), "Dense layer should not be compiled")
         self.assertFalse(reg.is_compiled(), "Regularizer should not be compiled")
 
@@ -169,8 +174,10 @@ class DenseTest(unittest.TestCase):
         coeff = 0.5
 
         reg = L2(coeff)
-        l = Dense(input_size, output_size, batch_size, "xavier", reg)
-        ctrl = Dense(input_size, output_size, batch_size, "xavier")
+        l = Dense(input_size, output_size, batch_size, "xavier", reg,
+                  weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
+        ctrl = Dense(input_size, output_size, batch_size, "xavier",
+                     weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         self.assertFalse(l.is_compiled(), "Dense layer should not be compiled")
         self.assertFalse(reg.is_compiled(), "Regularizer should not be compiled")
 
@@ -251,7 +258,8 @@ class DenseTest(unittest.TestCase):
         count = 100
         step = 0.01
 
-        l = Dense(input_size, output_size, batch_size, "xavier", L2(0.01))
+        l = Dense(input_size, output_size, batch_size, "xavier", L2(0.01),
+                  weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         l.compile(gen_param=True)
         param = l.param
         param2 = l.create_param()
@@ -300,7 +308,8 @@ class DenseTest(unittest.TestCase):
         step = 0.01
 
 
-        l = Dense(input_size, output_size, batch_size, "xavier")
+        l = Dense(input_size, output_size, batch_size, "xavier",
+                  weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         l.compile(gen_param=True)
 
         input = np.random.uniform(size=l.input_shape)
@@ -330,8 +339,10 @@ class DenseTest(unittest.TestCase):
         batch_size = 2
 
 
-        l1 = Dense(input_size, output_size_1, batch_size, "xavier")
-        l2 = Dense(output_size_1, output_size_2, batch_size, "xavier")
+        l1 = Dense(input_size, output_size_1, batch_size, "xavier",
+                   weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
+        l2 = Dense(output_size_1, output_size_2, batch_size, "xavier",
+                   weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         l1.compile(gen_param=True)
         l2.compile(gen_param=True)
 
@@ -362,8 +373,10 @@ class DenseTest(unittest.TestCase):
         batch_size = 2
 
 
-        l1 = Dense(input_size, output_size_1, batch_size, "xavier")
-        l2 = Dense(output_size_1, output_size_2, batch_size, "xavier")
+        l1 = Dense(input_size, output_size_1, batch_size, "xavier",
+                   weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
+        l2 = Dense(output_size_1, output_size_2, batch_size, "xavier",
+                   weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         l1.compile(gen_param=True)
         l2.compile(gen_param=True)
 
@@ -392,7 +405,8 @@ class DenseTest(unittest.TestCase):
         batch_size = 2
 
 
-        l = Dense(input_size, output_size, batch_size, "xavier")
+        l = Dense(input_size, output_size, batch_size, "xavier",
+                  weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         l.compile(gen_param=True)
 
         input = np.ones((batch_size, input_size))

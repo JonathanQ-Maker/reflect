@@ -1,6 +1,7 @@
 import numpy as np
 from reflect.layers import BatchNorm
 from reflect.profiler import num_grad, check_grad
+from reflect.optimizers import GradientDescent
 import time
 import unittest
 
@@ -62,7 +63,8 @@ class BatchNormTest(unittest.TestCase):
         beta = np.random.randn(C)
         dout = np.random.randn(B, H, W, C)
 
-        bn = BatchNorm((H, W, C), B)
+        bn = BatchNorm((H, W, C), B, 
+                       gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         self.assertFalse( bn.is_compiled(), "is compiled before compiling")
 
         bn.compile(gen_param=True)
@@ -109,7 +111,8 @@ class BatchNormTest(unittest.TestCase):
         beta = np.random.randn(D)
         dout = np.random.randn(N, D)
 
-        bn = BatchNorm(D, N)
+        bn = BatchNorm(D, N,
+                       gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         self.assertFalse( bn.is_compiled(), "is compiled before compiling")
 
         bn.compile(gen_param=True)
@@ -135,7 +138,8 @@ class BatchNormTest(unittest.TestCase):
         beta = np.random.randn(C)
         dout = np.random.randn(B, H, W, C)
 
-        bn = BatchNorm((H, W, C), B)
+        bn = BatchNorm((H, W, C), B,
+                       gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         self.assertFalse( bn.is_compiled(), "is compiled before compiling")
 
         bn.compile(gen_param=True)
@@ -166,7 +170,8 @@ class BatchNormTest(unittest.TestCase):
         new_std = 2
         new_mean = -5
 
-        bn = BatchNorm(D, N)
+        bn = BatchNorm(D, N,
+                       gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         self.assertFalse( bn.is_compiled(), "is compiled before compiling")
 
         bn.compile(gen_param=True)
@@ -205,7 +210,8 @@ class BatchNormTest(unittest.TestCase):
         new_std = 2
         new_mean = -5
 
-        bn = BatchNorm((H, W, C), B)
+        bn = BatchNorm((H, W, C), B,
+                       gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         self.assertFalse( bn.is_compiled(), "is compiled before compiling")
 
         bn.compile(gen_param=True)
@@ -241,8 +247,10 @@ class BatchNormTest(unittest.TestCase):
         beta = np.random.randn(D)
         dout = np.random.randn(N, D)
 
-        bn_a = BatchNorm(D, N, approx_dldx=True)
-        bn = BatchNorm(D, N, approx_dldx=False)
+        bn_a = BatchNorm(D, N, approx_dldx=True,
+                         gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
+        bn = BatchNorm(D, N, approx_dldx=False,
+                       gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
 
         self.assertFalse( bn_a.is_compiled(), "is compiled before compiling")
         self.assertFalse( bn.is_compiled(), "is compiled before compiling")

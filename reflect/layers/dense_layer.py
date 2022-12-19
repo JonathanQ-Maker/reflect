@@ -1,19 +1,23 @@
 from __future__ import annotations
 from reflect.layers.parametric_layer import ParametricLayer
+from reflect.optimizers import Adam
 from reflect import np
 
 class Dense(ParametricLayer):
 
-    _input          = None
+    _input              = None
 
-    _dldw           = None # gradient of loss with respect to weights
-    _dldb           = None # gradient of loss with respect to bias
-    _readonly_dldw  = None # read only dldw view
-    _readonly_dldb  = None # read only dldw view
+    _dldw               = None # gradient of loss with respect to weights
+    _dldb               = None # gradient of loss with respect to bias
+    _readonly_dldw      = None # read only dldw view
+    _readonly_dldb      = None # read only dldw view
 
-    _weight_shape   = None # (num input, num output)
-    weight_type     = None # weight initialization type
-    _regularizer    = None # weight regularizer
+    _weight_shape       = None # (num input, num output)
+    weight_type         = None # weight initialization type
+    _regularizer        = None # weight regularizer
+
+    weight_optimizer    = None
+    bias_optimizer      = None
 
     @property
     def dldw(self):
@@ -43,11 +47,21 @@ class Dense(ParametricLayer):
         view.flags.writeable = False
         return view
 
-    def __init__(self, input_size = 1, output_size = 1, batch_size = 1, weight_type = "he", 
-                 regularizer=None):
+    def __init__(self, 
+                 input_size         = 1, 
+                 output_size        = 1, 
+                 batch_size         = 1, 
+                 weight_type        = "he", 
+                 regularizer        = None, 
+                 weight_optimizer   = Adam(), 
+                 bias_optimizer     = Adam()):
+
+
         super().__init__(input_size, output_size, batch_size)
-        self.weight_type  = weight_type
-        self._regularizer  = regularizer
+        self.weight_type        = weight_type
+        self._regularizer       = regularizer
+        self.weight_optimizer   = weight_optimizer
+        self.bias_optimizer     = bias_optimizer
 
     def compile(self, gen_param=True):
         super().compile(gen_param)
@@ -65,6 +79,10 @@ class Dense(ParametricLayer):
         if (self._regularizer is not None):
             self._regularizer.compile(self._weight_shape)
 
+        # compile optimizers
+        self.weight_optimizer.compile(self._weight_shape)
+        self.bias_optimizer.compile(self._output_size)
+
         self.name = f"Dense {self._output_size}"
         if (gen_param):
             self.apply_param(self.create_param())
@@ -78,7 +96,17 @@ class Dense(ParametricLayer):
         if (self._regularizer is not None):
             regularizer_ok = self._regularizer.is_compiled()
 
-        return super().is_compiled() and weight_shape_match and regularizer_ok and dldw_ok and dldb_ok
+        optimizers_ok = (self.weight_optimizer is not None 
+                         and self.bias_optimizer is not None
+                         and self.weight_optimizer.is_compiled() 
+                         and self.bias_optimizer.is_compiled())
+
+        return (super().is_compiled() 
+                and weight_shape_match 
+                and regularizer_ok 
+                and dldw_ok 
+                and dldb_ok
+                and optimizers_ok)
         
 
     def init_weight(self, param, type, weight_bias = 0):
@@ -176,9 +204,16 @@ class Dense(ParametricLayer):
         if (dldb is None):
             dldb = self._dldb
 
+        # average batch gradient
         step = step / self._batch_size
-        np.add(self.param.weight, step * dldw, out=self.param.weight)  # weight update
-        np.add(self.param.bias, step * dldb, out=self.param.bias)      # bias update
+
+        # weight update
+        np.add(self.param.weight, self.weight_optimizer.gradient(step, dldw), 
+               out=self.param.weight)
+
+        # bias update
+        np.add(self.param.bias, self.bias_optimizer.gradient(step, dldb), 
+               out=self.param.bias)
 
     def __str__(self):
         return self.attribute_to_str()

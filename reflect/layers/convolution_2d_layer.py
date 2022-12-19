@@ -2,6 +2,7 @@ from __future__ import annotations
 from reflect.layers.parametric_layer import ParametricLayer
 from reflect import np
 from reflect.utils.misc import to_tuple, conv_size, in_conv_size
+from reflect.optimizers import Adam
 from math import ceil
 
 class Convolve2D(ParametricLayer):
@@ -23,6 +24,8 @@ class Convolve2D(ParametricLayer):
     _dldb               = None  # gradient with respect to bias
     _readonly_dldk      = None  # readonly dldk view
     _readonly_dldb      = None  # readonly dldb view
+    kernel_optimizer    = None
+    bias_optimizer      = None
 
     # internal variables
     _window_stride      = None  # input window view stride. ndarray type, used to multiply with input item size.
@@ -153,22 +156,29 @@ class Convolve2D(ParametricLayer):
         return self._pad_size
 
 
-    def __init__(self, input_size = (1, 1, 1), filter_size = (1, 1),
-                 kernels = 1,
-                 batch_size = 1, 
-                 strides = (1, 1),
-                 weight_type = "he",
-                 pad = False,
-                 kernel_regularizer=None,
-                 bias_regularizer=None):
+    def __init__(self, 
+                 input_size         = (1, 1, 1), 
+                 filter_size        = (1, 1),
+                 kernels            = 1,
+                 batch_size         = 1, 
+                 strides            = (1, 1),
+                 weight_type        = "he",
+                 pad                = False,
+                 kernel_regularizer = None,
+                 bias_regularizer   = None,
+                 kernel_optimizer   = None,
+                 bias_optimizer     = None):
+
         super().__init__(input_size, None, batch_size)
-        self._weight_type            = weight_type
-        self._kernel_regularizer     = kernel_regularizer
-        self._bias_regularizer       = bias_regularizer
-        self._strides                = strides
-        self._pad                    = pad
-        self._filter_size            = filter_size
-        self._kernels                = kernels
+        self._weight_type           = weight_type
+        self._kernel_regularizer    = kernel_regularizer
+        self._bias_regularizer      = bias_regularizer
+        self._strides               = strides
+        self._pad                   = pad
+        self._filter_size           = filter_size
+        self._kernels               = kernels
+        self.kernel_optimizer       = kernel_optimizer
+        self.bias_optimizer         = bias_optimizer
 
     def compile(self, gen_param=True):
         self._kernel_shape  = self.compute_kernel_shape()
@@ -204,6 +214,10 @@ class Convolve2D(ParametricLayer):
         self.init_base()
         self._window_stride, self._window_shape = self.compute_view_attr()
 
+        # compile optimizers
+        self.kernel_optimizer.compile(self._kernel_shape)
+        self.bias_optimizer.compile(self._kernels)
+
         self.name = f"Dense {self._output_size}"
         if (gen_param):
             self.apply_param(self.create_param())
@@ -233,13 +247,19 @@ class Convolve2D(ParametricLayer):
                       and self._padded_input.shape == self._padded_input_shape
                       and self._padded_input_view is not None)
 
+        optimizers_ok = (self.kernel_optimizer is not None 
+                         and self.bias_optimizer is not None
+                         and self.kernel_optimizer.is_compiled() 
+                         and self.bias_optimizer.is_compiled())
+
         return (super().is_compiled() 
                 and kernel_shape_match 
                 and regularizer_ok 
                 and dldk_ok and dldb_ok
                 and window_view_ok
                 and base_ok
-                and pad_ok)
+                and pad_ok
+                and optimizers_ok)
 
     def compute_output_shape(self):
         if (self._pad):
@@ -521,10 +541,16 @@ class Convolve2D(ParametricLayer):
             dldk = self._dldk
         if (dldb is None):
             dldb = self._dldb
+
+        # average batch gradient
         step = step / self._batch_size
-        # kernel & bias update
-        np.add(self.param.kernel, step * dldk, out=self.param.kernel)
-        np.add(self.param.bias, step * dldb, out=self.param.bias)
+
+        # kernel update
+        np.add(self.param.kernel, self.kernel_optimizer.gradient(step, dldk),
+              out=self.param.kernel)
+
+        # bias update
+        np.add(self.param.bias, self.bias_optimizer.gradient(step, dldb), out=self.param.bias)
 
     def __str__(self):
         return self.attribute_to_str()

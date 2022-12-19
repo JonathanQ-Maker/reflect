@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from reflect.compiled_object import CompiledObject
 from reflect import np
+from reflect.utils.misc import to_tuple
 
 class AbstractOptimizer(CompiledObject):
     
@@ -20,7 +21,7 @@ class AbstractOptimizer(CompiledObject):
         return self._readonly_grad
 
     @abstractmethod
-    def gradient(self, step, grad):
+    def gradient(self, step: float, grad):
         """
         Calculate optimizer processed gradient
 
@@ -38,7 +39,7 @@ class AbstractOptimizer(CompiledObject):
         pass
 
     def compile(self, shape):
-        self._shape         = shape
+        self._shape         = to_tuple(shape)
         self._grad          = np.zeros(self._shape)
         self._readonly_grad = self._grad.view()
 
