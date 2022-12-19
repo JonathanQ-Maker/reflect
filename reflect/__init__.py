@@ -1,2 +1,2 @@
-from reflect.models import *
 import numpy as np
+from reflect.models import *
