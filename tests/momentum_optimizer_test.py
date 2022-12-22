@@ -35,11 +35,12 @@ class MomentumOptimizerTest(unittest.TestCase):
             self.assertTrue(np.allclose(opt_grad, expected_grad, atol = 1e-4), 
                             f"expected gradient differ, {opt_grad} != {expected_grad}")
 
+            # test if match intuitive formula
             v_ = beta * v_ + (1.0 - beta) * grad
             unbiased = v_ / (1 - beta**(i+1))
             expected_grad = step * unbiased
 
-            # test if match intuitive formula
+            self.assertTrue(expected_grad is not opt_grad)
             self.assertTrue(np.allclose(opt_grad, expected_grad, atol = 1e-4), 
                             f"expected gradient differ, {opt_grad} != {expected_grad}")
 

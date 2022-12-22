@@ -30,12 +30,12 @@ class DenseTest(unittest.TestCase):
         target = np.random.uniform(size=output_shape)
     
         output = l.forward(input)
-        residual = target - output
+        residual = output - target
         loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
         init_loss = loss
         for i in range(step_count):
             output = l.forward(input)
-            residual = target - output
+            residual = output - target
             loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
             l.backprop(residual)
             l.apply_grad(step)
@@ -78,7 +78,7 @@ class DenseTest(unittest.TestCase):
                 if (e == 0):
                     print(f"layer[{i}] out std: {np.std(output)}")
 
-            residual = target - output
+            residual = output - target
             loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
             if (e == 0):
                 init_loss = loss
@@ -137,12 +137,12 @@ class DenseTest(unittest.TestCase):
     
         for d in [l, ctrl]:
             output = d.forward(input)
-            residual = target - output
+            residual = output - target
             loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
             init_loss = loss
             for i in range(step_count):
                 output = d.forward(input)
-                residual = target - output
+                residual = output - target
                 loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
                 d.backprop(residual)
                 d.apply_grad(step)
@@ -201,12 +201,12 @@ class DenseTest(unittest.TestCase):
     
         for d in [l, ctrl]:
             output = d.forward(input)
-            residual = target - output
+            residual = output - target
             loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
             init_loss = loss
             for i in range(step_count):
                 output = d.forward(input)
-                residual = target - output
+                residual = output - target
                 loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
                 d.backprop(residual)
                 d.apply_grad(step)
@@ -280,7 +280,7 @@ class DenseTest(unittest.TestCase):
 
         for i in range(count):
             output = l.forward(input)
-            residual = target - output
+            residual = output - target
             loss = np.sum(residual ** 2)
             if (i % 10 == 0):
                 print(f"loss[{i}]: {np.round(loss, 3)}")

@@ -49,7 +49,7 @@ class Adam(AbstractOptimizer):
     epsilon         = 1e-7  # numerical stability coefficient, (0, inf)
     _correction_rms = 1.0   # correction term for unbiased/early RMS gradients
 
-    def __init__(self, friction=0.1, decay=0.01, epsilon=1e-7):
+    def __init__(self, friction=0.1, decay=0.001, epsilon=1e-7):
         self.friction   = friction
         self.decay      = decay
         self.epsilon    = epsilon

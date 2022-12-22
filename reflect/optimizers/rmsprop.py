@@ -31,7 +31,7 @@ class RMSprop(AbstractOptimizer):
     epsilon         = 1e-7  # numerical stability coefficient, (0, inf)
     _correction     = 1.0   # correction term for unbiased/early gradients
 
-    def __init__(self, decay=0.01, epsilon=1e-7):
+    def __init__(self, decay=0.001, epsilon=1e-7):
         self.decay      = decay
         self.epsilon    = epsilon
 

@@ -179,6 +179,10 @@ class Convolve2D(ParametricLayer):
         self._kernels               = kernels
         self.kernel_optimizer       = kernel_optimizer
         self.bias_optimizer         = bias_optimizer
+        if kernel_optimizer is None:
+            self.kernel_optimizer   = Adam()
+        if bias_optimizer is None:
+            self.bias_optimizer     = Adam()
 
     def compile(self, gen_param=True):
         self._kernel_shape  = self.compute_kernel_shape()
@@ -546,11 +550,11 @@ class Convolve2D(ParametricLayer):
         step = step / self._batch_size
 
         # kernel update
-        np.add(self.param.kernel, self.kernel_optimizer.gradient(step, dldk),
+        np.subtract(self.param.kernel, self.kernel_optimizer.gradient(step, dldk),
               out=self.param.kernel)
 
         # bias update
-        np.add(self.param.bias, self.bias_optimizer.gradient(step, dldb), out=self.param.bias)
+        np.subtract(self.param.bias, self.bias_optimizer.gradient(step, dldb), out=self.param.bias)
 
     def __str__(self):
         return self.attribute_to_str()

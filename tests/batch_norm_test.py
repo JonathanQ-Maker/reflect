@@ -184,7 +184,7 @@ class BatchNormTest(unittest.TestCase):
         out = bn.forward(x)
         for i in range(count):
             bn.forward(x)
-            residual = target - out
+            residual = out - target
             bn.backprop(residual)
             bn.apply_grad(step)
 
@@ -224,7 +224,7 @@ class BatchNormTest(unittest.TestCase):
         out = bn.forward(x)
         for i in range(count):
             bn.forward(x)
-            residual = (target - out) / B
+            residual = (out - target) / B
             bn.backprop(residual)
             bn.apply_grad(step)
 

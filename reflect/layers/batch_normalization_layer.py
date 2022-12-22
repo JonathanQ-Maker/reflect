@@ -62,8 +62,8 @@ class BatchNorm(ParametricLayer):
                  momentum           = 0.9, 
                  epsilon            = 1e-5, 
                  approx_dldx        = False,
-                 gamma_optimizer    = Adam(),
-                 bias_optimizer     = Adam()):
+                 gamma_optimizer    = None,
+                 bias_optimizer     = None):
 
         super().__init__(input_size, input_size, batch_size)
         self.momentum           = momentum
@@ -71,6 +71,10 @@ class BatchNorm(ParametricLayer):
         self._approx_dldx       = approx_dldx
         self.gamma_optimizer    = gamma_optimizer
         self.bias_optimizer     = bias_optimizer
+        if gamma_optimizer is None:
+            self.gamma_optimizer    = Adam()
+        if bias_optimizer is None:
+            self.bias_optimizer     = Adam()
 
     def compile(self, gen_param=True):
         self._output_size = self._input_size
@@ -267,11 +271,11 @@ class BatchNorm(ParametricLayer):
             dldb = self._dldb
 
         # gamma update
-        np.add(self.param.gamma, self.gamma_optimizer.gradient(step, dldg), 
+        np.subtract(self.param.gamma, self.gamma_optimizer.gradient(step, dldg), 
                out=self.param.gamma)
 
         # beta update
-        np.add(self.param.beta, self.bias_optimizer.gradient(step, dldb), 
+        np.subtract(self.param.beta, self.bias_optimizer.gradient(step, dldb), 
                out=self.param.beta)
 
     def __str__(self):

@@ -4,6 +4,7 @@ reflect.pyperf
 reflect.pyproj
 reflect.pyproj.user
 .vs
+data/
 
 # https://stackoverflow.com/questions/65738611/why-does-git-ignore-not-work-for-pycache-folder
 **/__pycache__

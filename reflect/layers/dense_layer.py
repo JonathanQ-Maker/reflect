@@ -53,8 +53,8 @@ class Dense(ParametricLayer):
                  batch_size         = 1, 
                  weight_type        = "he", 
                  regularizer        = None, 
-                 weight_optimizer   = Adam(), 
-                 bias_optimizer     = Adam()):
+                 weight_optimizer   = None, 
+                 bias_optimizer     = None):
 
 
         super().__init__(input_size, output_size, batch_size)
@@ -62,6 +62,10 @@ class Dense(ParametricLayer):
         self._regularizer       = regularizer
         self.weight_optimizer   = weight_optimizer
         self.bias_optimizer     = bias_optimizer
+        if weight_optimizer is None:
+            self.weight_optimizer   = Adam()
+        if bias_optimizer is None:
+            self.bias_optimizer     = Adam()
 
     def compile(self, gen_param=True):
         super().compile(gen_param)
@@ -188,7 +192,7 @@ class Dense(ParametricLayer):
         np.dot(self._input.T, dldz, out=self._dldw)
         np.sum(dldz, axis=0, out=self._dldb)
         if (self._regularizer != None):
-            np.subtract(self._dldw, self._regularizer.gradient(self.param.weight), out=self._dldw)
+            np.add(self._dldw, self._regularizer.gradient(self.param.weight), out=self._dldw)
         return np.dot(dldz, self.param.weight.T, out=self._dldx)
 
     def apply_grad(self, step, dldw=None, dldb=None):
@@ -208,11 +212,11 @@ class Dense(ParametricLayer):
         step = step / self._batch_size
 
         # weight update
-        np.add(self.param.weight, self.weight_optimizer.gradient(step, dldw), 
+        np.subtract(self.param.weight, self.weight_optimizer.gradient(step, dldw), 
                out=self.param.weight)
 
         # bias update
-        np.add(self.param.bias, self.bias_optimizer.gradient(step, dldb), 
+        np.subtract(self.param.bias, self.bias_optimizer.gradient(step, dldb), 
                out=self.param.bias)
 
     def __str__(self):
