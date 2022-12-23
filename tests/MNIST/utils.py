@@ -26,7 +26,7 @@ IMG_DIM = 28
 IMG_LENGTH = IMG_DIM * IMG_DIM
 
 # decode methods adapted from https://stackoverflow.com/a/53448171
-def decode_image_file(path):
+def decode_image_file(path, flat=True):
     """
     decodes MNIST image file
 
@@ -34,7 +34,7 @@ def decode_image_file(path):
         path: path to file
 
     Returns:
-        numpy array of shape (# examples, 784) 
+        numpy array of shape (# examples, 784) or (# examples, 28, 28, 1)
     """
     n_bytes_per_img = IMG_DIM*IMG_DIM
 
@@ -45,7 +45,10 @@ def decode_image_file(path):
         if len(data) % n_bytes_per_img != 0:
             raise Exception('Something wrong with the file')
         result = np.frombuffer(data, dtype=np.uint8)
-        result.shape = (len(bytes_)//n_bytes_per_img, n_bytes_per_img)
+        if (flat):
+            result.shape = (len(bytes_)//n_bytes_per_img, n_bytes_per_img)
+        else:
+            result.shape = (len(bytes_)//n_bytes_per_img, IMG_DIM, IMG_DIM, 1)
         return result
 
 def decode_label_file(path):
@@ -65,15 +68,39 @@ def decode_label_file(path):
         return np.frombuffer(data, dtype=np.uint8)
 
 
-def load_MNIST_image(url, filename):
+def load_MNIST_image(url, filename, flat=True):
+    """
+    load MNIST data and encode into images. 
+    If MNIST file does not exist file will be downloaded from url
+
+    Args:
+        url:        url to download file from
+        filename:   file to load
+        flat:       should image be flattened
+
+    Returns:
+        numpy array of shape (# examples, 784) or (# examples, 28, 28, 1)
+    """
+
     file_path = os.path.join(DATA_FOLDER_PATH, filename)
     if not os.path.isfile(file_path):
         # file does not exist
         download_file(url, DATA_FOLDER_PATH, filename, True)
 
-    return decode_image_file(file_path)
+    return decode_image_file(file_path, flat)
 
 def load_MNIST_label(url, filename):
+    """
+    load MNIST data and encode into labels. 
+    If MNIST file does not exist file will be downloaded from url
+
+    Args:
+        url:        url to download file from
+        filename:   file to load
+
+    Returns:
+        numpy array of shape (# examples, ) 
+    """
     file_path = os.path.join(DATA_FOLDER_PATH, filename)
     if not os.path.isfile(file_path):
         # file does not exist
