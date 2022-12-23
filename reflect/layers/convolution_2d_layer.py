@@ -6,6 +6,20 @@ from reflect.optimizers import Adam
 from math import ceil
 
 class Convolve2D(ParametricLayer):
+    """
+    2D Convolution layer
+
+    Shape:
+        input:  (batch size, height, wdith, channels)
+        
+        No pad
+            output: (batch size, 
+                    conv_size(height, filter, stride), 
+                    conv_size(width, filter, stride), 
+                    kernels)
+        Pad
+            output: (batch size, height, width, kernels)
+    """
     
     # public variables
     _filter_size        = None  # filter size, (height, width) or scaler

@@ -4,6 +4,14 @@ from reflect import np
 from reflect.optimizers import Adam
 
 class BatchNorm(ParametricLayer):
+    """
+    Batch Normalization layer
+    normalize over all except last axis
+
+    Shape:
+        input:  (batch size, ...)
+        output: (batch size, ...)
+    """
 
     _input          = None
 

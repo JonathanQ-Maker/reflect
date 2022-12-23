@@ -5,6 +5,14 @@ from reflect import np
 
 class Dense(ParametricLayer):
 
+    """
+    Dense layer
+
+    Shape:
+        input:  (batch size, input size)
+        output: (batch size, output size)
+    """
+
     _input              = None
 
     _dldw               = None # gradient of loss with respect to weights

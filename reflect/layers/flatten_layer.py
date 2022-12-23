@@ -1,32 +1,27 @@
 from reflect.layers.absrtact_layer import AbstractLayer
 from reflect import np
 
-class Relu(AbstractLayer):
+class Flatten(AbstractLayer):
     """
-    Rectified Linear Activation Unit (RELU)
+    Flatten layer, flattens input
 
     Shape:
         input:  (batch size, ...)
-        output: (batch size, ...)
+        output: (batch size, prod(input_size))
     """
 
-    _input = None
-
-    @property
-    def input(self):
-        if (self._input is None):
-            return None
-        view = self._input.view()
-        view.flags.writeable = False
-        return view
+    _flat_output    = None
+    _flat_dldx      = None
 
     def __init__(self, input_size=1, batch_size=1):
         super().__init__(input_size, input_size, batch_size)
 
 
     def compile(self):
-        self._output_size = self._input_size
+        self._output_size = np.prod(self._input_size)
         super().compile()
+        self._flat_output   = self._output.ravel()
+        self._flat_dldx     = self._dldx.ravel()
     
     def is_compiled(self):
         dldx_ok = self._dldx is not None and self._dldx.shape == self._input_shape
@@ -45,8 +40,8 @@ class Relu(AbstractLayer):
         Make copy of output if intended to be modified
         Input instance will be kept and expected not to be modified between forward and backward pass
         """
-        self._input = X
-        np.maximum(X, 0, out=self._output)
+
+        np.copyto(self._flat_output, X.ravel())
         return self._readonly_output
 
     def backprop(self, dldz):
@@ -62,6 +57,6 @@ class Relu(AbstractLayer):
         Note:
             expected to execute only once after forward
         """
-        np.multiply(np.greater(self._input, 0, out=self._dldx), dldz, out=self._dldx)
+        np.copyto(self._flat_dldx, dldz.ravel())
         return self._readonly_dldx
         
