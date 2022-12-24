@@ -63,6 +63,10 @@ class Dense(ParametricLayer):
     def units(self, units):
         self._output_size = units
 
+    @property
+    def total_params(self):
+        return self.param.weight.size + self.param.bias.size
+
     def __init__(self, 
                  units,
                  weight_type        = "he", 

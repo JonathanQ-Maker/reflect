@@ -27,6 +27,7 @@ class Relu(AbstractLayer):
     def compile(self, input_size, batch_size):
         self._output_size = input_size
         super().compile(input_size, batch_size)
+        self.name = "Relu"
     
     def is_compiled(self):
         dldx_ok = self._dldx is not None and self._dldx.shape == self._input_shape

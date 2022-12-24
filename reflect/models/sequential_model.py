@@ -8,6 +8,14 @@ class SequentialModel(AbstractModel):
 
     _layers = None
 
+    @property
+    def total_params(self):
+        total = 0
+        for layer in self._layers:
+            if isinstance(layer, ParametricLayer):
+                total += layer.total_params
+        return total
+
     def __init__(self, input_size:tuple , batch_size=1):
         self._layers = []
         self._input_size = input_size
@@ -24,6 +32,8 @@ class SequentialModel(AbstractModel):
         for layer in self._layers:
             layer.compile(input_size, self._batch_size)
             input_size = layer.output_size
+        self._output = self._layers[-1].output
+        self._output_shape = self._layers[-1].output_shape
 
     def is_compiled(self):
         for layer in self._layers:
@@ -35,7 +45,6 @@ class SequentialModel(AbstractModel):
         input = X
         for layer in self._layers:
             input = layer.forward(input)
-        self._output = input
         return self._output
 
     def backprop(self, dldz):

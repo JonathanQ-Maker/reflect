@@ -173,6 +173,10 @@ class Convolve2D(ParametricLayer):
         """
         return self._pad_size
 
+    @property
+    def total_params(self):
+        return self.param.kernel.size + self.peram.bias.size
+
 
     def __init__(self, 
                  filter_size        = (1, 1),
@@ -240,7 +244,7 @@ class Convolve2D(ParametricLayer):
         self.kernel_optimizer.compile(self._kernel_shape)
         self.bias_optimizer.compile(self._kernels)
 
-        self.name = f"Dense {self._output_size}"
+        self.name = f"{self._kernels} Convolve2D {self._filter_size[0]}x{self._filter_size[1]}"
         if (gen_param):
             self.apply_param(self.create_param())
 

@@ -63,6 +63,10 @@ class BatchNorm(ParametricLayer):
     def axis(self):
         return self._axis
 
+    @property
+    def total_params(self):
+        return self.param.gamma.size + self.param.beta.size
+
 
     def __init__(self, 
                  momentum           = 0.9, 
@@ -291,8 +295,8 @@ class BatchNorm(ParametricLayer):
         return (super().attribute_to_str()
         + f"max gamma:      {self.param.gamma.max()}\n"
         + f"min gamma:      {self.param.gamma.min()}\n"
-        + f"max beta:       {self.param.beta.max()}\n"
-        + f"min beta:       {self.param.beta.min()}\n"
+        + f"std gamma:      {self.param.gamma.std()}\n"
+        + f"mean gamma:     {self.param.gamma.mean()}\n"
         + f"momentum:       {self.param.momentum}")
 
 

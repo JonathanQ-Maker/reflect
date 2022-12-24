@@ -22,6 +22,7 @@ class Flatten(AbstractLayer):
         super().compile(input_size, batch_size)
         self._flat_output   = self._output.ravel()
         self._flat_dldx     = self._dldx.ravel()
+        self.name           = "Flatten"
     
     def is_compiled(self):
         dldx_ok = self._dldx is not None and self._dldx.shape == self._input_shape

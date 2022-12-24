@@ -4,6 +4,10 @@ from abc import abstractmethod
 class ParametricLayer(AbstractLayer):
     param = None
 
+    @property
+    def total_params(self):
+        return 0
+
     def __init__(self):
         super().__init__()
     
