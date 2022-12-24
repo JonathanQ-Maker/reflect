@@ -185,7 +185,7 @@ class Convolve2D(ParametricLayer):
                  kernel_optimizer   = None,
                  bias_optimizer     = None):
 
-        super().__init__(None)
+        super().__init__()
         self._weight_type           = weight_type
         self._kernel_regularizer    = kernel_regularizer
         self._bias_regularizer      = bias_regularizer

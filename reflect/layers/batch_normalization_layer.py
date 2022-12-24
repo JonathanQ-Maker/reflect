@@ -71,7 +71,7 @@ class BatchNorm(ParametricLayer):
                  gamma_optimizer    = None,
                  bias_optimizer     = None):
 
-        super().__init__(None)
+        super().__init__()
         self.momentum           = momentum
         self.epsilon            = epsilon
         self._approx_dldx       = approx_dldx

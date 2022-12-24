@@ -21,7 +21,7 @@ class Relu(AbstractLayer):
         return view
 
     def __init__(self):
-        super().__init__(None)
+        super().__init__()
 
 
     def compile(self, input_size, batch_size):

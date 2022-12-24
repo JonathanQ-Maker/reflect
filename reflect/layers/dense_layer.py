@@ -71,7 +71,8 @@ class Dense(ParametricLayer):
                  bias_optimizer     = None):
 
 
-        super().__init__(units)
+        super().__init__()
+        self._output_size       = units
         self.weight_type        = weight_type
         self._regularizer       = regularizer
         self.weight_optimizer   = weight_optimizer

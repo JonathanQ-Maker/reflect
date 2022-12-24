@@ -14,7 +14,7 @@ class Flatten(AbstractLayer):
     _flat_dldx      = None
 
     def __init__(self):
-        super().__init__(None)
+        super().__init__()
 
 
     def compile(self, input_size, batch_size=1):

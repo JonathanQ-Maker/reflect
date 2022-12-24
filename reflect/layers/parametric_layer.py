@@ -4,8 +4,8 @@ from abc import abstractmethod
 class ParametricLayer(AbstractLayer):
     param = None
 
-    def __init__(self, output_size):
-        super().__init__(output_size)
+    def __init__(self):
+        super().__init__()
     
     @abstractmethod
     def create_param(self):

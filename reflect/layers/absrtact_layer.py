@@ -56,9 +56,6 @@ class AbstractLayer(CompiledObject):
     def batch_size(self):
         return self._batch_size
 
-    def __init__(self, output_size):
-        self._output_size   = output_size
-
     def compile(self, input_size, batch_size):
         super().compile()
         self._input_size = input_size
