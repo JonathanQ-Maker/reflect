@@ -13,13 +13,13 @@ class Flatten(AbstractLayer):
     _flat_output    = None
     _flat_dldx      = None
 
-    def __init__(self, input_size=1, batch_size=1):
-        super().__init__(input_size, input_size, batch_size)
+    def __init__(self):
+        super().__init__(None)
 
 
-    def compile(self):
-        self._output_size = np.prod(self._input_size)
-        super().compile()
+    def compile(self, input_size, batch_size=1):
+        self._output_size = np.prod(input_size)
+        super().compile(input_size, batch_size)
         self._flat_output   = self._output.ravel()
         self._flat_dldx     = self._dldx.ravel()
     

@@ -20,13 +20,13 @@ class Relu(AbstractLayer):
         view.flags.writeable = False
         return view
 
-    def __init__(self, input_size=1, batch_size=1):
-        super().__init__(input_size, input_size, batch_size)
+    def __init__(self):
+        super().__init__(None)
 
 
-    def compile(self):
-        self._output_size = self._input_size
-        super().compile()
+    def compile(self, input_size, batch_size):
+        self._output_size = input_size
+        super().compile(input_size, batch_size)
     
     def is_compiled(self):
         dldx_ok = self._dldx is not None and self._dldx.shape == self._input_shape

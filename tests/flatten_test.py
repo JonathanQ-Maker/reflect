@@ -14,8 +14,8 @@ class FlattenTest(unittest.TestCase):
         input = np.random.normal(size=input_shape)
 
 
-        l = Flatten(input_size, batch_size)
-        l.compile()
+        l = Flatten()
+        l.compile(input_size, batch_size)
 
         self.assertTrue(l.is_compiled(), "layer is not compiled")
 
@@ -33,8 +33,8 @@ class FlattenTest(unittest.TestCase):
         dldz = np.random.normal(size=expected_shape)
 
 
-        l = Flatten(input_size, batch_size)
-        l.compile()
+        l = Flatten()
+        l.compile(input_size, batch_size)
         self.assertTrue(l.is_compiled(), "layer is not compiled")
 
         l.forward(input)

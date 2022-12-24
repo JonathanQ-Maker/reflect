@@ -55,17 +55,23 @@ class Dense(ParametricLayer):
         view.flags.writeable = False
         return view
 
+    @property
+    def units(self):
+        return self._output_size
+
+    @units.setter
+    def units(self, units):
+        self._output_size = units
+
     def __init__(self, 
-                 input_size         = 1, 
-                 output_size        = 1, 
-                 batch_size         = 1, 
+                 units,
                  weight_type        = "he", 
                  regularizer        = None, 
                  weight_optimizer   = None, 
                  bias_optimizer     = None):
 
 
-        super().__init__(input_size, output_size, batch_size)
+        super().__init__(units)
         self.weight_type        = weight_type
         self._regularizer       = regularizer
         self.weight_optimizer   = weight_optimizer
@@ -75,8 +81,8 @@ class Dense(ParametricLayer):
         if bias_optimizer is None:
             self.bias_optimizer     = Adam()
 
-    def compile(self, gen_param=True):
-        super().compile(gen_param)
+    def compile(self, input_size, batch_size=1, gen_param=True):
+        super().compile(input_size, batch_size, gen_param)
         self._weight_shape = (self._input_size, self._output_size)
 
         # compile gradient

@@ -1,5 +1,6 @@
 from reflect.models.abstract_model import AbstractModel
 from reflect.layers.parametric_layer import ParametricLayer
+from reflect.layers.absrtact_layer import AbstractLayer
 
 class SequentialModel(AbstractModel):
     """Sequential forward model"""
@@ -7,12 +8,22 @@ class SequentialModel(AbstractModel):
 
     _layers = None
 
-    def __init__(self, *layers):
-        self._layers = layers
+    def __init__(self, input_size:tuple , batch_size=1):
+        self._layers = []
+        self._input_size = input_size
+        self._batch_size = batch_size
+
+    def add(self, layer: AbstractLayer):
+        if isinstance(layer, AbstractLayer):
+            self._layers.append(layer)
+        else:
+            raise ValueError("can only add layers")
 
     def compile(self):
+        input_size = self._input_size
         for layer in self._layers:
-            layer.compile()
+            layer.compile(input_size, self._batch_size)
+            input_size = layer.output_size
 
     def is_compiled(self):
         for layer in self._layers:

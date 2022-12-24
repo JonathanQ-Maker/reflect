@@ -4,8 +4,8 @@ from abc import abstractmethod
 class ParametricLayer(AbstractLayer):
     param = None
 
-    def __init__(self, input_size, output_size, batch_size):
-        super().__init__(input_size, output_size, batch_size)
+    def __init__(self, output_size):
+        super().__init__(output_size)
     
     @abstractmethod
     def create_param(self):
@@ -29,8 +29,8 @@ class ParametricLayer(AbstractLayer):
         """
         pass
 
-    def compile(self, gen_param=True):
-        super().compile()
+    def compile(self, input_size, batch_size, gen_param=True):
+        super().compile(input_size, batch_size)
 
     def apply_grad(self, step):
         """

@@ -20,9 +20,9 @@ class Convolve2DTest(unittest.TestCase):
         input = np.random.normal(size=input_shape)
 
 
-        l = Convolve2D(input_size, kernel_size, K, B, strides, "xavier", 
+        l = Convolve2D(kernel_size, K, strides, "xavier", 
                        kernel_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
-        l.compile(gen_param=True)
+        l.compile(input_size, B, gen_param=True)
 
         dldz = np.random.normal(size=l.output_shape)
 
@@ -69,9 +69,9 @@ class Convolve2DTest(unittest.TestCase):
         input = np.random.normal(size=input_shape)
 
 
-        l = Convolve2D(input_size, kernel_size, K, B, strides, "xavier", pad=True,
+        l = Convolve2D(kernel_size, K, strides, "xavier", pad=True,
                        kernel_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
-        l.compile(gen_param=True)
+        l.compile(input_size, B, gen_param=True)
 
         self.assertTrue(l.output.shape[:-1] == l.input_shape[:-1], 
                         f"output and input shape differ {l.output.shape[:-1]} != {l.input_shape[:-1]}")

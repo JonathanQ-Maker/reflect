@@ -65,6 +65,8 @@ class Convolve2D(ParametricLayer):
     @filter_size.setter
     def filter_size(self, filter_size):
         self._filter_size = filter_size
+        if isinstance(filter_size, int):
+            self._filter_size = (filter_size, filter_size)
 
     @property
     def kernels(self):
@@ -109,6 +111,8 @@ class Convolve2D(ParametricLayer):
     @strides.setter
     def strides(self, strides):
         self._strides = strides
+        if isinstance(strides, int):
+            self._strides = (strides, strides)
 
     @property
     def kernel_regularizer(self):
@@ -171,10 +175,8 @@ class Convolve2D(ParametricLayer):
 
 
     def __init__(self, 
-                 input_size         = (1, 1, 1), 
                  filter_size        = (1, 1),
                  kernels            = 1,
-                 batch_size         = 1, 
                  strides            = (1, 1),
                  weight_type        = "he",
                  pad                = False,
@@ -183,13 +185,13 @@ class Convolve2D(ParametricLayer):
                  kernel_optimizer   = None,
                  bias_optimizer     = None):
 
-        super().__init__(input_size, None, batch_size)
+        super().__init__(None)
         self._weight_type           = weight_type
         self._kernel_regularizer    = kernel_regularizer
         self._bias_regularizer      = bias_regularizer
-        self._strides               = strides
+        self.strides                = strides
         self._pad                   = pad
-        self._filter_size           = filter_size
+        self.filter_size            = filter_size
         self._kernels               = kernels
         self.kernel_optimizer       = kernel_optimizer
         self.bias_optimizer         = bias_optimizer
@@ -198,7 +200,9 @@ class Convolve2D(ParametricLayer):
         if bias_optimizer is None:
             self.bias_optimizer     = Adam()
 
-    def compile(self, gen_param=True):
+    def compile(self, input_size, batch_size=1, gen_param=True):
+        self._input_size    = input_size
+        self._batch_size    = batch_size
         self._kernel_shape  = self.compute_kernel_shape()
         self._input_shape   = (self._batch_size, ) + to_tuple(self._input_size)
         if (self._pad):
@@ -291,12 +295,6 @@ class Convolve2D(ParametricLayer):
                 self._kernels)
 
     def compute_kernel_shape(self):
-        if isinstance(self._filter_size, int):
-            return (self._kernels, 
-                    self._filter_size, 
-                    self._filter_size, 
-                    self._input_size[2])
-        else:
             return (self._kernels, ) + self._filter_size + (self._input_size[2], )
 
     def compute_view_attr(self):

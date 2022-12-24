@@ -15,10 +15,10 @@ class BatchNormTest(unittest.TestCase):
         beta = np.random.randn(D)
         dout = np.random.randn(N, D)
 
-        bn = BatchNorm(D, N)
+        bn = BatchNorm()
         self.assertFalse(bn.is_compiled(), "is compiled before compiling")
 
-        bn.compile(gen_param=True)
+        bn.compile(D, N, gen_param=True)
         self.assertTrue(bn.is_compiled(), "is not compiled after compiling")
 
         bn.param.beta = beta
@@ -63,11 +63,10 @@ class BatchNormTest(unittest.TestCase):
         beta = np.random.randn(C)
         dout = np.random.randn(B, H, W, C)
 
-        bn = BatchNorm((H, W, C), B, 
-                       gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
+        bn = BatchNorm(gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         self.assertFalse( bn.is_compiled(), "is compiled before compiling")
 
-        bn.compile(gen_param=True)
+        bn.compile((H, W, C), B, gen_param=True)
         self.assertTrue(bn.is_compiled(), "is not compiled after compiling")
 
         bn.param.beta = beta
@@ -111,11 +110,10 @@ class BatchNormTest(unittest.TestCase):
         beta = np.random.randn(D)
         dout = np.random.randn(N, D)
 
-        bn = BatchNorm(D, N,
-                       gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
-        self.assertFalse( bn.is_compiled(), "is compiled before compiling")
+        bn = BatchNorm(gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
+        self.assertFalse(bn.is_compiled(), "is compiled before compiling")
 
-        bn.compile(gen_param=True)
+        bn.compile(D, N, gen_param=True)
         self.assertTrue(bn.is_compiled(), "is not compiled after compiling")
 
         bn.param.beta = beta
@@ -138,11 +136,10 @@ class BatchNormTest(unittest.TestCase):
         beta = np.random.randn(C)
         dout = np.random.randn(B, H, W, C)
 
-        bn = BatchNorm((H, W, C), B,
-                       gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
+        bn = BatchNorm(gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         self.assertFalse( bn.is_compiled(), "is compiled before compiling")
 
-        bn.compile(gen_param=True)
+        bn.compile((H, W, C), B, gen_param=True)
         self.assertTrue(bn.is_compiled(), "is not compiled after compiling")
 
         bn.param.beta = beta
@@ -170,11 +167,10 @@ class BatchNormTest(unittest.TestCase):
         new_std = 2
         new_mean = -5
 
-        bn = BatchNorm(D, N,
-                       gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
+        bn = BatchNorm(gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         self.assertFalse( bn.is_compiled(), "is compiled before compiling")
 
-        bn.compile(gen_param=True)
+        bn.compile(D, N, gen_param=True)
         self.assertTrue(bn.is_compiled(), "is not compiled after compiling")
 
         bn.param.beta = beta
@@ -210,11 +206,10 @@ class BatchNormTest(unittest.TestCase):
         new_std = 2
         new_mean = -5
 
-        bn = BatchNorm((H, W, C), B,
-                       gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
+        bn = BatchNorm(gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         self.assertFalse( bn.is_compiled(), "is compiled before compiling")
 
-        bn.compile(gen_param=True)
+        bn.compile((H, W, C), B, gen_param=True)
         self.assertTrue(bn.is_compiled(), "is not compiled after compiling")
 
         bn.param.beta = beta
@@ -247,16 +242,16 @@ class BatchNormTest(unittest.TestCase):
         beta = np.random.randn(D)
         dout = np.random.randn(N, D)
 
-        bn_a = BatchNorm(D, N, approx_dldx=True,
+        bn_a = BatchNorm(approx_dldx=True,
                          gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
-        bn = BatchNorm(D, N, approx_dldx=False,
+        bn = BatchNorm(approx_dldx=False,
                        gamma_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
 
         self.assertFalse( bn_a.is_compiled(), "is compiled before compiling")
         self.assertFalse( bn.is_compiled(), "is compiled before compiling")
 
-        bn_a.compile(gen_param=True)
-        bn.compile(gen_param=True)
+        bn_a.compile(D, N, gen_param=True)
+        bn.compile(D, N, gen_param=True)
         self.assertTrue(bn_a.is_compiled(), "is not compiled after compiling")
         self.assertTrue(bn.is_compiled(), "is not compiled after compiling")
 

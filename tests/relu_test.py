@@ -10,8 +10,8 @@ class ReluTest(unittest.TestCase):
         input_size = 5
         batch_size = 3
 
-        l = Relu(input_size, batch_size)
-        l.compile()
+        l = Relu()
+        l.compile(input_size, batch_size)
 
 
         input = np.random.uniform(size=l.input_shape)
@@ -37,10 +37,10 @@ class ReluTest(unittest.TestCase):
         batch_size = 2
 
 
-        l1 = Dense(input_size, output_size_1, batch_size, "xavier")
-        l2 = Relu(output_size_1, batch_size)
-        l1.compile(gen_param=True)
-        l2.compile()
+        l1 = Dense(output_size_1, "xavier")
+        l2 = Relu()
+        l1.compile(input_size, batch_size, gen_param=True)
+        l2.compile(output_size_1, batch_size)
 
         input = np.random.uniform(size=l1.input_shape)
         target = np.random.uniform(size=l2.output_shape)
@@ -71,10 +71,10 @@ class ReluTest(unittest.TestCase):
         batch_size = 2
 
 
-        l1 = Dense(input_size, output_size_1, batch_size, "xavier")
-        l2 = Relu(output_size_1, batch_size)
-        l1.compile(gen_param=True)
-        l2.compile()
+        l1 = Dense(output_size_1, "xavier")
+        l2 = Relu()
+        l1.compile(input_size, batch_size, gen_param=True)
+        l2.compile(output_size_1, batch_size)
 
         input = np.random.uniform(size=l1.input_shape)
         target = np.random.uniform(size=l2.output_shape)
@@ -100,14 +100,13 @@ class ReluTest(unittest.TestCase):
     def test_relu_shape(self):
         input_size = 2
 
-        l = Relu(input_size, 3)
-        l.compile()
+        l = Relu()
+        l.compile(input_size, 3)
 
         self.assertTrue(l.output_shape == l.input_shape, "Input, output shape differ")
         self.assertTrue(l.output_shape == (3, 2), "Expected output shape differ")
 
-        l.input_size = (4, 5)
-        l.compile()
+        l.compile((4, 5), 3)
 
         self.assertTrue(l.output_shape == l.input_shape, "Input, output shape differ")
         self.assertTrue(l.output_shape == (3, 4, 5), "Expected output shape differ")

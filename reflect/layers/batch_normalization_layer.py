@@ -65,15 +65,13 @@ class BatchNorm(ParametricLayer):
 
 
     def __init__(self, 
-                 input_size         = 1, 
-                 batch_size         = 1, 
                  momentum           = 0.9, 
                  epsilon            = 1e-5, 
                  approx_dldx        = False,
                  gamma_optimizer    = None,
                  bias_optimizer     = None):
 
-        super().__init__(input_size, input_size, batch_size)
+        super().__init__(None)
         self.momentum           = momentum
         self.epsilon            = epsilon
         self._approx_dldx       = approx_dldx
@@ -84,9 +82,9 @@ class BatchNorm(ParametricLayer):
         if bias_optimizer is None:
             self.bias_optimizer     = Adam()
 
-    def compile(self, gen_param=True):
-        self._output_size = self._input_size
-        super().compile(gen_param)
+    def compile(self, input_size, batch_size=1, gen_param=True):
+        self._output_size = input_size
+        super().compile(input_size, batch_size, gen_param)
         self._axis = tuple(i for i in range(len(self._input_shape)-1))
         self._param_shape = (self._output_shape[-1], )
 

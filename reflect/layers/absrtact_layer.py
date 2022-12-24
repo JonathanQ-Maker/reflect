@@ -36,10 +36,6 @@ class AbstractLayer(CompiledObject):
     def input_size(self):
         return self._input_size
 
-    @input_size.setter
-    def input_size(self, size):
-        self._input_size = size
-
     @property
     def input_shape(self):
         return self._input_shape
@@ -60,17 +56,13 @@ class AbstractLayer(CompiledObject):
     def batch_size(self):
         return self._batch_size
 
-    @batch_size.setter
-    def batch_size(self, size):
-        self._batch_size = size
-
-    def __init__(self, input_size, output_size, batch_size):
-        self._batch_size    = batch_size
-        self._input_size    = input_size
+    def __init__(self, output_size):
         self._output_size   = output_size
 
-    def compile(self):
+    def compile(self, input_size, batch_size):
         super().compile()
+        self._input_size = input_size
+        self._batch_size = batch_size
         # compile shapes
         self._input_shape   = (self._batch_size, ) + to_tuple(self._input_size)
         self._output_shape  = (self._batch_size, ) + to_tuple(self._output_size)
