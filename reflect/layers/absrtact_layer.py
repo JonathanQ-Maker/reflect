@@ -123,6 +123,9 @@ class AbstractLayer(CompiledObject):
         """
         return 1
 
+    def __str__(self):
+        return self.attribute_to_str()
+
     def attribute_to_str(self):
         return (f"name:           {self.name}\n" 
         + f"batch size:     {self._batch_size}\n"

@@ -3,7 +3,7 @@ import os.path
 from matplotlib import pyplot
 from tests.MNIST import *
 from reflect.models import SequentialModel
-from reflect.layers import Relu, Dense, Convolve2D, Flatten
+from reflect.layers import Relu, Dense, Convolve2D, Flatten, AvgPool2D
 from reflect.optimizers import *
 from reflect.regularizers import L2, L1
 import numpy as np
@@ -52,6 +52,7 @@ class MNISTConvolutionTest(unittest.TestCase):
         model = SequentialModel((IMG_DIM, IMG_DIM, 1))
         model.add(Convolve2D(filter, kernels, kernel_regularizer=L2()))
         model.add(Relu())
+        model.add(AvgPool2D(3, 2))
         model.add(Convolve2D(filter, kernels, kernel_regularizer=L2()))
         model.add(Relu())
         model.add(Flatten())

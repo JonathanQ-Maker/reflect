@@ -238,9 +238,6 @@ class Dense(ParametricLayer):
         np.subtract(self.param.bias, self.bias_optimizer.gradient(step, dldb), 
                out=self.param.bias)
 
-    def __str__(self):
-        return self.attribute_to_str()
-
     def attribute_to_str(self):
         return (super().attribute_to_str()
         + f"weight init:    {self.weight_type}\n"

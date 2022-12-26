@@ -258,9 +258,11 @@ class Convolve2D(ParametricLayer):
 
         regularizer_ok = self.regularizers_ok(self._kernel_regularizer, 
                                               self._bias_regularizer)
-        stride, shape = self.compute_view_attr()
-        window_view_ok = (np.all(stride == self._window_stride) 
-                          and shape == self._window_shape)
+        window_view_ok = self._input_shape is not None
+        if window_view_ok:
+            stride, shape = self.compute_view_attr()
+            window_view_ok = (np.all(stride == self._window_stride) 
+                              and shape == self._window_shape)
         base_ok = (self._base_view is not None 
                    and self._base_view.shape == self._output_shape)
 
@@ -571,9 +573,6 @@ class Convolve2D(ParametricLayer):
 
         # bias update
         np.subtract(self.param.bias, self.bias_optimizer.gradient(step, dldb), out=self.param.bias)
-
-    def __str__(self):
-        return self.attribute_to_str()
 
     def attribute_to_str(self):
         return (super().attribute_to_str()

@@ -288,9 +288,6 @@ class BatchNorm(ParametricLayer):
         np.subtract(self.param.beta, self.bias_optimizer.gradient(step, dldb), 
                out=self.param.beta)
 
-    def __str__(self):
-        return self.attribute_to_str()
-
     def attribute_to_str(self):
         return (super().attribute_to_str()
         + f"max gamma:      {self.param.gamma.max()}\n"
