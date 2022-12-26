@@ -197,15 +197,3 @@ class AvgPool2D(AbstractLayer):
         np.copyto(self._base_view, self._scaled_dldz)
         np.sum(self._base_window_view, axis=(3, 4), out=self._dldx)
         return self._readonly_dldx
-
-
-
-
-
-
-
-class DenseParam():
-    weight = None
-    weight_type = None
-
-    bias = None
