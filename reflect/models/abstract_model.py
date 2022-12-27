@@ -61,4 +61,10 @@ class AbstractModel(CompiledObject):
         return
 
     def __str__(self):
-        return "abstract model"
+        return (f"Type:           {self.__class__.__name__}\n"
+                + f"Total params:   {self.total_params}\n\n\nLayers:\n\n")
+
+    def print_summary(self):
+        print(f"{'='*50}\nModel Summary\n")
+        print(self.__str__())
+        print(f"{'='*50}\n")

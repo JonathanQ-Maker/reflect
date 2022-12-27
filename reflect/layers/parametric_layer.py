@@ -43,3 +43,7 @@ class ParametricLayer(AbstractLayer):
         Note: gradients over batch axis is summed
         """
         pass
+
+    def attribute_to_str(self):
+        return (super().attribute_to_str()
+                + f"params:         {self.total_params}\n")

@@ -175,7 +175,7 @@ class Convolve2D(ParametricLayer):
 
     @property
     def total_params(self):
-        return self.param.kernel.size + self.peram.bias.size
+        return self.param.kernel.size + self.param.bias.size
 
 
     def __init__(self, 
@@ -580,7 +580,8 @@ class Convolve2D(ParametricLayer):
         + f"max kernel:     {self.param.kernel.max()}\n"
         + f"min kernel:     {self.param.kernel.min()}\n"
         + f"kernel std:     {np.std(self.param.kernel)}\n"
-        + f"kernel mean:    {np.mean(self.param.kernel)}\n")
+        + f"kernel mean:    {np.mean(self.param.kernel)}\n"
+        + f"pad:            {self._pad}\n")
 
 
 

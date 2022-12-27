@@ -57,3 +57,11 @@ class SequentialModel(AbstractModel):
         for layer in self._layers:
             if (isinstance(layer, ParametricLayer)):
                 layer.apply_grad(step)
+
+    def __getitem__(self, key):
+        return self._layers[key]
+
+    def __str__(self):
+        result = '\n\n'.join(str(layer) for layer in self._layers)
+        return super().__str__() + result
+            

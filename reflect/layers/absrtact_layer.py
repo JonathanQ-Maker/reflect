@@ -130,5 +130,5 @@ class AbstractLayer(CompiledObject):
         return (f"name:           {self.name}\n" 
         + f"batch size:     {self._batch_size}\n"
         + f"compiled:       {self.is_compiled()}\n"
-        + f"output_shape:   {self._output_shape}\n"
-        + f"input_shape:    {self._input_shape}\n")
+        + f"input_shape:    {self._input_shape}\n"
+        + f"output_shape:   {self._output_shape}\n")

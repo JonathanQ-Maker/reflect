@@ -59,6 +59,7 @@ class MNISTConvolutionTest(unittest.TestCase):
         model.add(Dense(10, regularizer=L2()))
 
         model.compile()
+        model.print_summary()
 
         def loss(output, label):
             i = 0
