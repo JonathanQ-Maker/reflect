@@ -1,6 +1,7 @@
 from __future__ import annotations
 from reflect.layers.parametric_layer import ParametricLayer
 from reflect.optimizers import Adam
+from reflect.utils.misc import to_tuple
 from reflect import np
 
 class Dense(ParametricLayer):
@@ -22,7 +23,8 @@ class Dense(ParametricLayer):
 
     _weight_shape       = None # (num input, num output)
     weight_type         = None # weight initialization type
-    _regularizer        = None # weight regularizer
+    weight_reg          = None # weight regularizer
+    bias_reg            = None # bias regularizer
 
     weight_optimizer    = None
     bias_optimizer      = None
@@ -38,14 +40,6 @@ class Dense(ParametricLayer):
     @property
     def weight_shape(self):
         return self._weight_shape
-
-    @property
-    def regularizer(self):
-        return self._regularizer
-
-    @regularizer.setter
-    def regularizer(self, regularizer):
-        self._regularizer = regularizer
 
     @property
     def input(self):
@@ -78,7 +72,7 @@ class Dense(ParametricLayer):
         super().__init__()
         self._output_size       = units
         self.weight_type        = weight_type
-        self._regularizer       = regularizer
+        self.weight_reg       = regularizer
         self.weight_optimizer   = weight_optimizer
         self.bias_optimizer     = bias_optimizer
         if weight_optimizer is None:
@@ -99,8 +93,10 @@ class Dense(ParametricLayer):
         self._readonly_dldb.flags.writeable = False
 
         # compile regularizer
-        if (self._regularizer is not None):
-            self._regularizer.compile(self._weight_shape)
+        if (self.weight_reg is not None):
+            self.weight_reg.compile(self._weight_shape)
+        if (self.bias_reg is not None):
+            self.bias_reg.compile(to_tuple(self._output_size))
 
         # compile optimizers
         self.weight_optimizer.compile(self._weight_shape)
@@ -116,20 +112,24 @@ class Dense(ParametricLayer):
         dldb_ok = self._dldb is not None and self._dldb.shape[0] == self._output_size
 
         regularizer_ok = True
-        if (self._regularizer is not None):
-            regularizer_ok = self._regularizer.is_compiled()
+        if (self.weight_reg is not None):
+            regularizer_ok = self.weight_reg.is_compiled()
 
-        optimizers_ok = (self.weight_optimizer is not None 
-                         and self.bias_optimizer is not None
-                         and self.weight_optimizer.is_compiled() 
-                         and self.bias_optimizer.is_compiled())
+        weight_optimizer_ok = (self.weight_optimizer is not None
+                         and self.weight_optimizer.is_compiled()
+                         and self.weight_optimizer.shape == self._weight_shape)
+
+        bias_optimizer_ok = (self.bias_optimizer is not None
+                         and self.bias_optimizer.is_compiled()
+                         and self.bias_optimizer.shape == to_tuple(self._output_size))
 
         return (super().is_compiled() 
                 and weight_shape_match 
                 and regularizer_ok 
                 and dldw_ok 
                 and dldb_ok
-                and optimizers_ok)
+                and weight_optimizer_ok
+                and bias_optimizer_ok)
         
 
     def init_weight(self, param, type, weight_bias = 0):
@@ -209,8 +209,10 @@ class Dense(ParametricLayer):
         """
         np.dot(self._input.T, dldz, out=self._dldw)
         np.sum(dldz, axis=0, out=self._dldb)
-        if (self._regularizer != None):
-            np.add(self._dldw, self._regularizer.gradient(self.param.weight), out=self._dldw)
+        if (self.weight_reg != None):
+            np.add(self._dldw, self.weight_reg.gradient(self.param.weight), out=self._dldw)
+        if (self.bias_reg != None):
+            np.add(self._dldb, self.bias_reg.gradient(self.param.bias), out=self._dldb)
         return np.dot(dldz, self.param.weight.T, out=self._dldx)
 
     def apply_grad(self, step, dldw=None, dldb=None):

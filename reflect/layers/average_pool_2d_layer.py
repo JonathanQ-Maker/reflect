@@ -52,8 +52,8 @@ class AvgPool2D(AbstractLayer):
             self._strides = (strides, strides)
 
     def __init__(self, 
-                 pool_size=1, 
-                 strides=None):
+                 pool_size  =1, 
+                 strides    =None):
         super().__init__()
         self.pool_size  = pool_size
         self.strides    = strides

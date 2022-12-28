@@ -2,6 +2,7 @@ from __future__ import annotations
 from reflect.layers.parametric_layer import ParametricLayer
 from reflect import np
 from reflect.optimizers import Adam
+from reflect.utils.misc import to_tuple
 
 class BatchNorm(ParametricLayer):
     """
@@ -134,13 +135,13 @@ class BatchNorm(ParametricLayer):
                        and self._residual.shape == self._input_shape)
         residual_mean_ok = (self._residual_mean is not None 
                             and self._residual_mean.shape == self._param_shape)
-        momentum_ok = (self.momentum is not None 
-                       and self.momentum <= 1 
-                       and self.momentum > 0)
-        optimizers_ok = (self.gamma_optimizer is not None 
-                         and self.bias_optimizer is not None
-                         and self.gamma_optimizer.is_compiled() 
-                         and self.bias_optimizer.is_compiled())
+        gamma_optimizer_ok = (self.gamma_optimizer is not None
+                         and self.gamma_optimizer.is_compiled()
+                         and self.gamma_optimizer.shape == self._param_shape)
+
+        bias_optimizer_ok = (self.bias_optimizer is not None
+                         and self.bias_optimizer.is_compiled()
+                         and self.bias_optimizer.shape == self._param_shape)
         return (super().is_compiled() 
                 and axis_ok 
                 and gamma_shape_match
@@ -152,8 +153,8 @@ class BatchNorm(ParametricLayer):
                 and dldb_ok
                 and residual_ok
                 and residual_mean_ok
-                and momentum_ok
-                and optimizers_ok)
+                and gamma_optimizer_ok
+                and bias_optimizer_ok)
 
     def create_param(self):
         super().create_param()

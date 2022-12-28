@@ -50,10 +50,10 @@ class MNISTConvolutionTest(unittest.TestCase):
         test_examples = np.minimum(1000, test_examples)
 
         model = SequentialModel((IMG_DIM, IMG_DIM, 1))
-        model.add(Convolve2D(filter, kernels, kernel_regularizer=L2()))
+        model.add(Convolve2D(filter, kernels, kernel_reg=L2()))
         model.add(Relu())
         model.add(AvgPool2D(3, 2))
-        model.add(Convolve2D(filter, kernels, kernel_regularizer=L2()))
+        model.add(Convolve2D(filter, kernels, kernel_reg=L2()))
         model.add(Relu())
         model.add(Flatten())
         model.add(Dense(10, regularizer=L2()))

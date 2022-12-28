@@ -20,7 +20,7 @@ class TransposedConv2D(ParametricLayer):
 
     # public variables
     _filter_size        = None  # filter size, (height, width) or scaler
-    _kernels            = 1     # number of kernels
+    kernels             = 1     # number of kernels
     _kernel_shape       = None  # (num kernel, height, width, channel)
     weight_type         = None  # weight initialization type
     _strides            = (1, 1)# (stride y, stride x), convolution strides
@@ -30,6 +30,9 @@ class TransposedConv2D(ParametricLayer):
     _dldb               = None  # gradient of loss with respect to bias
     _readonly_dldk      = None  # read only dldk view
     _readonly_dldb      = None  # read only dldw view
+
+    kernel_reg          = None  # kernel regularizer
+    bias_reg            = None  # bias regularizer
 
     kernel_optimizer    = None
     bias_optimizer      = None
@@ -59,17 +62,6 @@ class TransposedConv2D(ParametricLayer):
         self._filter_size = filter_size
         if isinstance(filter_size, int):
             self._filter_size = (filter_size, filter_size)
-
-    @property
-    def kernels(self):
-        """
-        number of kernels
-        """
-        return self._kernels
-
-    @kernels.setter
-    def kernels(self, kernels):
-        self._kernels = kernels
 
     @property
     def strides(self):
@@ -122,6 +114,8 @@ class TransposedConv2D(ParametricLayer):
                  kernels            = 1,
                  strides            = (1, 1),
                  weight_type        = "he",
+                 kernel_reg         = None,
+                 bias_reg           = None,
                  kernel_optimizer   = None,
                  bias_optimizer     = None):
 
@@ -130,7 +124,9 @@ class TransposedConv2D(ParametricLayer):
         self.weight_type            = weight_type
         self.strides                = strides
         self.filter_size            = filter_size
-        self._kernels               = kernels
+        self.kernels                = kernels
+        self.kernel_reg             = kernel_reg
+        self.bias_reg               = bias_reg
         self.kernel_optimizer       = kernel_optimizer
         self.bias_optimizer         = bias_optimizer
         if kernel_optimizer is None:
@@ -142,7 +138,7 @@ class TransposedConv2D(ParametricLayer):
         self._input_size    = input_size
         self._batch_size    = batch_size
         self._kernel_shape  = self.compute_kernel_shape()
-        self._input_shape   = (self._batch_size, ) + to_tuple(self._input_size)
+        self._input_shape   = (self._batch_size, ) + self._input_size
         self._output_shape = self.compute_output_shape()
         self._output_size  = self._output_shape[1:]
 
@@ -156,7 +152,7 @@ class TransposedConv2D(ParametricLayer):
 
         # compile gradient
         self._dldk = np.zeros(shape=self._kernel_shape)
-        self._dldb = np.zeros(shape=self._kernels)
+        self._dldb = np.zeros(shape=self.kernels)
         self._readonly_dldk = self._dldk.view()
         self._readonly_dldb = self._dldb.view()
         self._readonly_dldk.flags.writeable = False
@@ -170,11 +166,17 @@ class TransposedConv2D(ParametricLayer):
 
         self.init_base()
 
+        # compile regularizers
+        if (self.kernel_reg is not None):
+            self.kernel_reg.compile(self._kernel_shape)
+        if (self.bias_reg is not None):
+            self.bias_reg.compile(to_tuple(self.kernels))
+
         # compile optimizers
         self.kernel_optimizer.compile(self._kernel_shape)
-        self.bias_optimizer.compile(self._kernels)
+        self.bias_optimizer.compile(self.kernels)
 
-        self.name = f"{self._kernels} TransposedConv2D {self._filter_size[0]}x{self._filter_size[1]}"
+        self.name = f"{self.kernels} TransposedConv2D {self._filter_size[0]}x{self._filter_size[1]}"
         if (gen_param):
             self.apply_param(self.create_param())
 
@@ -184,7 +186,7 @@ class TransposedConv2D(ParametricLayer):
         dldk_ok = (self._dldk is not None 
                    and self._dldk.shape == self._kernel_shape)
         dldb_ok = (self._dldb is not None 
-                   and self._dldb.shape[0] == self._kernels)
+                   and self._dldb.shape[0] == self.kernels)
 
         attributes = self.compute_view_attr()
         attributes_ok = (np.array_equal(self._dldz_kernel_shape, attributes[0])
@@ -194,14 +196,26 @@ class TransposedConv2D(ParametricLayer):
 
         base_ok = (self._base_core_view is not None 
                    and self._base_core_view.shape == self._input_shape)
+
+        kernel_optimizer_ok = (self.kernel_optimizer is not None
+                         and self.kernel_optimizer.is_compiled()
+                         and self.kernel_optimizer.shape == self._kernel_shape)
+
+        bias_optimizer_ok = (self.bias_optimizer is not None
+                         and self.bias_optimizer.is_compiled()
+                         and self.bias_optimizer.shape == to_tuple(self.kernels))
+
+
         return (super().is_compiled() 
                 and kernel_shape_match 
                 and dldk_ok and dldb_ok
                 and attributes_ok
-                and base_ok)
+                and base_ok
+                and kernel_optimizer_ok
+                and bias_optimizer_ok)
 
     def compute_kernel_shape(self):
-        return (self._kernels, ) + self._filter_size + (self._input_size[2], )
+        return (self.kernels, ) + self._filter_size + (self._input_size[2], )
 
     def init_kernel(self, param, type, weight_bias = 0):
         """
@@ -230,7 +244,7 @@ class TransposedConv2D(ParametricLayer):
         return (self._batch_size, 
                 in_conv_size(self._input_size[0], self._filter_size[0], self._strides[0]),
                 in_conv_size(self._input_size[1], self._filter_size[1], self._strides[1]),
-                self._kernels)
+                self.kernels)
 
     def init_base(self):
         B, H, W, C  = self._input_shape
@@ -295,7 +309,7 @@ class TransposedConv2D(ParametricLayer):
         param = TransposedConv2DParam()
 
         self.init_kernel(param, self.weight_type, 0)
-        param.bias  = np.zeros(self._kernels)
+        param.bias  = np.zeros(self.kernels)
         return param
 
     def param_compatible(self, param: TransposedConv2DParam):
@@ -309,7 +323,7 @@ class TransposedConv2D(ParametricLayer):
             is compatible
         """
 
-        bias_ok = (param.bias is not None) and param.bias.shape[0] == self._kernels
+        bias_ok = (param.bias is not None) and param.bias.shape[0] == self.kernels
         kernel_ok = (param.kernel is not None) and param.kernel.shape == self._kernel_shape
 
         return bias_ok and kernel_ok
@@ -386,6 +400,12 @@ class TransposedConv2D(ParametricLayer):
 
         np.copyto(self._dldx, dldx)
         np.copyto(self._dldk, dldk)
+
+        # add regularizer
+        if (self.kernel_reg is not None):
+            np.add(self._dldk, self.kernel_reg.gradient(self.param.kernel), out=self._dldk)
+        if (self.bias_reg is not None):
+            np.add(self._dldb, self.bias_reg.gradient(self.param.bias), out=self._dldb)
         return self._readonly_dldx
 
     def apply_grad(self, step, dldk=None, dldb=None):

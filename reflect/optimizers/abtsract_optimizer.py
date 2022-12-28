@@ -11,7 +11,7 @@ class AbstractOptimizer(CompiledObject):
 
     @property
     def shape(self):
-        return _shape
+        return self._shape
 
     @property
     def grad(self):

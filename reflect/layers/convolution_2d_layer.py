@@ -23,13 +23,13 @@ class Convolve2D(ParametricLayer):
     
     # public variables
     _filter_size        = None  # filter size, (height, width) or scaler
-    _kernels            = 1     # number of kernels
+    kernels             = 1     # number of kernels
     _kernel_shape       = None  # (num kernel, height, width, channel)
-    _pad                = False # zero pad input to maintain spatial dimention
-    _weight_type        = None  # weight(kernel) initialization type
+    pad                 = False # zero pad input to maintain spatial dimention
+    weight_type         = None  # weight(kernel) initialization type
     _strides            = (1, 1)# (stride y, stride x), convolution strides
-    _kernel_regularizer = None
-    _bias_regularizer   = None
+    kernel_reg  = None
+    bias_reg    = None
     _input              = None
     _padded_input_shape = None  # input shape after padded
     _pad_size           = None  # (pad_H_top, pad_H_bot, pad_W_left, pad_W_right) amount padded along H and W axis
@@ -51,7 +51,6 @@ class Convolve2D(ParametricLayer):
     _dldz_window_stride = None  # input window view stride for dldz_kernel_view
     _dldz_window_shape  = None  # input window view shape for dldz_kernel_view
 
-    _kernel_rot180      = None  # view object of kernel at 180 degrees
     _padded_input       = None  # array used as input for padded inputs
     _padded_input_view  = None  # padded_input view without padding, used for input paste
 
@@ -69,39 +68,6 @@ class Convolve2D(ParametricLayer):
             self._filter_size = (filter_size, filter_size)
 
     @property
-    def kernels(self):
-        """
-        number of kernels
-        """
-        return self._kernels
-
-    @kernels.setter
-    def kernels(self, kernels):
-        self._kernels = kernels
-
-    @property
-    def pad(self):
-        """
-        zero pad input to maintain spatial dimention
-        """
-        return self._pad
-
-    @pad.setter
-    def pad(self, pad):
-        self._pad = pad
-
-    @property
-    def weight_type(self):
-        """
-        weight initialization type
-        """
-        return self._weight_type
-
-    @weight_type.setter
-    def weight_type(self, type):
-        self._weight_type = type
-
-    @property
     def strides(self):
         """
         (stride y, stride x), convolution strides
@@ -113,22 +79,6 @@ class Convolve2D(ParametricLayer):
         self._strides = strides
         if isinstance(strides, int):
             self._strides = (strides, strides)
-
-    @property
-    def kernel_regularizer(self):
-        return self._kernel_regularizer
-
-    @kernel_regularizer.setter
-    def kernel_regularizer(self, regularizer):
-        self._kernel_regularizer = regularizer
-
-    @property
-    def bias_regularizer(self):
-        return self._kernel_regularizer
-
-    @kernel_regularizer.setter
-    def bias_regularizer(self, regularizer):
-        self._bias_regularizer = regularizer
 
     @property
     def input(self):
@@ -184,19 +134,19 @@ class Convolve2D(ParametricLayer):
                  strides            = (1, 1),
                  weight_type        = "he",
                  pad                = False,
-                 kernel_regularizer = None,
-                 bias_regularizer   = None,
+                 kernel_reg         = None,
+                 bias_reg           = None,
                  kernel_optimizer   = None,
                  bias_optimizer     = None):
 
         super().__init__()
-        self._weight_type           = weight_type
-        self._kernel_regularizer    = kernel_regularizer
-        self._bias_regularizer      = bias_regularizer
+        self.weight_type            = weight_type
+        self.kernel_reg             = kernel_reg
+        self.bias_reg               = bias_reg
         self.strides                = strides
-        self._pad                   = pad
+        self.pad                    = pad
         self.filter_size            = filter_size
-        self._kernels               = kernels
+        self.kernels                = kernels
         self.kernel_optimizer       = kernel_optimizer
         self.bias_optimizer         = bias_optimizer
         if kernel_optimizer is None:
@@ -208,8 +158,8 @@ class Convolve2D(ParametricLayer):
         self._input_size    = input_size
         self._batch_size    = batch_size
         self._kernel_shape  = self.compute_kernel_shape()
-        self._input_shape   = (self._batch_size, ) + to_tuple(self._input_size)
-        if (self._pad):
+        self._input_shape   = (self._batch_size, ) + self._input_size
+        if (self.pad):
             self._padded_input_shape, self._pad_size = self.compute_padded_input()
             self._padded_input = np.zeros(shape=self._padded_input_shape)
             _, H, W, _ = self._padded_input_shape
@@ -230,7 +180,7 @@ class Convolve2D(ParametricLayer):
 
         # compile gradient
         self._dldk = np.zeros(shape=self._kernel_shape)
-        self._dldb = np.zeros(shape=self._kernels)
+        self._dldb = np.zeros(shape=self.kernels)
         self._readonly_dldk = self._dldk.view()
         self._readonly_dldb = self._dldb.view()
         self._readonly_dldk.flags.writeable = False
@@ -242,9 +192,9 @@ class Convolve2D(ParametricLayer):
 
         # compile optimizers
         self.kernel_optimizer.compile(self._kernel_shape)
-        self.bias_optimizer.compile(self._kernels)
+        self.bias_optimizer.compile(self.kernels)
 
-        self.name = f"{self._kernels} Convolve2D {self._filter_size[0]}x{self._filter_size[1]}"
+        self.name = f"{self.kernels} Convolve2D {self._filter_size[0]}x{self._filter_size[1]}"
         if (gen_param):
             self.apply_param(self.create_param())
 
@@ -254,10 +204,10 @@ class Convolve2D(ParametricLayer):
         dldk_ok = (self._dldk is not None 
                    and self._dldk.shape == self._kernel_shape)
         dldb_ok = (self._dldb is not None 
-                   and self._dldb.shape[0] == self._kernels)
+                   and self._dldb.shape[0] == self.kernels)
 
-        regularizer_ok = self.regularizers_ok(self._kernel_regularizer, 
-                                              self._bias_regularizer)
+        regularizer_ok = self.regularizers_ok(self.kernel_reg, 
+                                              self.bias_reg)
         window_view_ok = self._input_shape is not None
         if window_view_ok:
             stride, shape = self.compute_view_attr()
@@ -266,8 +216,8 @@ class Convolve2D(ParametricLayer):
         base_ok = (self._base_view is not None 
                    and self._base_view.shape == self._output_shape)
 
-        pad_ok = not self._pad
-        if (self._pad):
+        pad_ok = not self.pad
+        if (self.pad):
             padded_input_shape, pad_size = self.compute_padded_input()
             pad_ok = (self._pad_size == pad_size
                       and self._padded_input_shape == padded_input_shape
@@ -275,10 +225,13 @@ class Convolve2D(ParametricLayer):
                       and self._padded_input.shape == self._padded_input_shape
                       and self._padded_input_view is not None)
 
-        optimizers_ok = (self.kernel_optimizer is not None 
-                         and self.bias_optimizer is not None
-                         and self.kernel_optimizer.is_compiled() 
-                         and self.bias_optimizer.is_compiled())
+        kernel_optimizer_ok = (self.kernel_optimizer is not None
+                         and self.kernel_optimizer.is_compiled()
+                         and self.kernel_optimizer.shape == self._kernel_shape)
+
+        bias_optimizer_ok = (self.bias_optimizer is not None
+                         and self.bias_optimizer.is_compiled()
+                         and self.bias_optimizer.shape == to_tuple(self.kernels))
 
         return (super().is_compiled() 
                 and kernel_shape_match 
@@ -287,21 +240,22 @@ class Convolve2D(ParametricLayer):
                 and window_view_ok
                 and base_ok
                 and pad_ok
-                and optimizers_ok)
+                and kernel_optimizer_ok
+                and bias_optimizer_ok)
 
     def compute_output_shape(self):
-        if (self._pad):
+        if (self.pad):
             return (self._batch_size, 
                     conv_size(self._padded_input_shape[1], self._filter_size[0], self._strides[0]),
                     conv_size(self._padded_input_shape[2], self._filter_size[1], self._strides[1]),
-                    self._kernels)
+                    self.kernels)
         return (self._batch_size, 
                 conv_size(self._input_size[0], self._filter_size[0], self._strides[0]),
                 conv_size(self._input_size[1], self._filter_size[1], self._strides[1]),
-                self._kernels)
+                self.kernels)
 
     def compute_kernel_shape(self):
-            return (self._kernels, ) + self._filter_size + (self._input_size[2], )
+            return (self.kernels, ) + self._filter_size + (self._input_size[2], )
 
     def compute_view_attr(self):
         """
@@ -311,7 +265,7 @@ class Convolve2D(ParametricLayer):
 
         # forward view attributes
         B, H, W, C = self._input_shape
-        if (self._pad):
+        if (self.pad):
             B, H, W, C = self._padded_input_shape
         K, h, w, _ = self._kernel_shape
         stride_h, stride_w = self._strides
@@ -338,12 +292,12 @@ class Convolve2D(ParametricLayer):
 
     def init_regularizers(self):
         # kernel
-        if (self._kernel_regularizer is not None):
-            self._kernel_regularizer.compile(self._kernel_shape)
+        if (self.kernel_reg is not None):
+            self.kernel_reg.compile(self._kernel_shape)
 
         # bias
-        if (self._bias_regularizer is not None):
-            self._bias_regularizer.compile(to_tuple(self._kernels))
+        if (self.bias_reg is not None):
+            self.bias_reg.compile(to_tuple(self.kernels))
 
     def init_kernel(self, param, type, weight_bias = 0):
         """
@@ -373,7 +327,7 @@ class Convolve2D(ParametricLayer):
         base matrix used to compute dldx, dldk
         """
         B, H, W, C = self._input_shape
-        if (self._pad):
+        if (self.pad):
             B, H, W, C = self._padded_input_shape
         K, h, w, _ = self._kernel_shape
         stride_h, stride_w = self._strides
@@ -427,18 +381,18 @@ class Convolve2D(ParametricLayer):
         super().create_param()
         param = Convolve2DParam()
 
-        self.init_kernel(param, self._weight_type, 0)
-        param.bias  = np.zeros(self._kernels)
+        self.init_kernel(param, self.weight_type, 0)
+        param.bias  = np.zeros(self.kernels)
         return param
 
-    def regularizers_ok(self, kernel_regularizer, bias_regularizer):
+    def regularizers_ok(self, kernel_reg, bias_reg):
         kernel_regularizer_ok = True
-        if (kernel_regularizer is not None):
-            kernel_regularizer_ok = kernel_regularizer.is_compiled()
+        if (kernel_reg is not None):
+            kernel_regularizer_ok = kernel_reg.is_compiled()
 
         bias_regularizer_ok = True
-        if (bias_regularizer is not None):
-            bias_regularizer_ok = bias_regularizer.is_compiled()
+        if (bias_reg is not None):
+            bias_regularizer_ok = bias_reg.is_compiled()
 
         return kernel_regularizer_ok and bias_regularizer_ok
 
@@ -453,7 +407,7 @@ class Convolve2D(ParametricLayer):
             is compatible
         """
 
-        bias_ok = (param.bias is not None) and param.bias.shape[0] == self._kernels
+        bias_ok = (param.bias is not None) and param.bias.shape[0] == self.kernels
         kernel_ok = (param.kernel is not None) and param.kernel.shape == self._kernel_shape
 
         return bias_ok and kernel_ok
@@ -467,7 +421,6 @@ class Convolve2D(ParametricLayer):
         """
 
         super().apply_param(param)
-        self._kernel_rot180 = np.rot90(param.kernel, k=2, axes=(1, 2))
     
     def forward(self, X):
         """
@@ -484,7 +437,7 @@ class Convolve2D(ParametricLayer):
         """
         self._input = X
 
-        if (self._pad):
+        if (self.pad):
             np.copyto(self._padded_input_view, X)
             X = self._padded_input
         strides = self._window_stride * X.itemsize
@@ -512,14 +465,14 @@ class Convolve2D(ParametricLayer):
         """
         # compute dldx gradient
         # NOTE: convolution on stride spaced dldz with 180 rotated kernel computes dldx
+        kernel_rot180 = np.rot90(self.param.kernel, k=2, axes=(1, 2))
         np.copyto(self._base_view, dldz)
-        print(self._dldz_kernel_view)
         dldx = np.einsum('BHWhwK,KhwC->BHWC', self._base_window_view, 
-                         self._kernel_rot180, optimize="optimal")
+                         kernel_rot180, optimize="optimal")
 
         # compute dldk gradient
         input = self._input
-        if (self._pad):
+        if (self.pad):
             input = self._padded_input
         strides = self._dldz_window_stride * input.itemsize
         view = np.lib.stride_tricks.as_strided(input, 
@@ -529,7 +482,7 @@ class Convolve2D(ParametricLayer):
         # NOTE: stride 1 convolution on input with modified kernel shape computes dldk
         dldk = np.einsum('BHWhwC,BKhw->KHWC', view, 
                             self._dldz_kernel_view, optimize="optimal")
-        if (self._pad):
+        if (self.pad):
             _, H, W, _ = self._padded_input_shape
             pad_H_top, pad_H_bot, pad_W_left, pad_W_right = self._pad_size
             dldx = dldx[:, pad_H_top:H-pad_H_bot, pad_W_left:W-pad_W_right, :]
@@ -540,10 +493,10 @@ class Convolve2D(ParametricLayer):
         np.sum(dldz, axis=(0, 1, 2), out=self._dldb)
 
         # add regularizer
-        if (self._kernel_regularizer is not None):
-            np.add(self._dldk, self._kernel_regularizer.gradient(self.param.kernel), out=self._dldk)
-        if (self._bias_regularizer is not None):
-            np.add(self._dldb, self._bias_regularizer.gradient(self.param.bias), out=self._dldb)
+        if (self.kernel_reg is not None):
+            np.add(self._dldk, self.kernel_reg.gradient(self.param.kernel), out=self._dldk)
+        if (self.bias_reg is not None):
+            np.add(self._dldb, self.bias_reg.gradient(self.param.bias), out=self._dldb)
 
         return self._dldx
 
@@ -574,12 +527,12 @@ class Convolve2D(ParametricLayer):
 
     def attribute_to_str(self):
         return (super().attribute_to_str()
-        + f"weight init:    {self._weight_type}\n"
+        + f"weight init:    {self.weight_type}\n"
         + f"max kernel:     {self.param.kernel.max()}\n"
         + f"min kernel:     {self.param.kernel.min()}\n"
         + f"kernel std:     {np.std(self.param.kernel)}\n"
         + f"kernel mean:    {np.mean(self.param.kernel)}\n"
-        + f"pad:            {self._pad}\n")
+        + f"pad:            {self.pad}\n")
 
 
 
