@@ -155,7 +155,6 @@ class Dense(ParametricLayer):
 
 
         param.weight = np.random.normal(loc=weight_bias, scale=scale, size=self._weight_shape)
-        param.weight_type = self.weight_type
 
     def create_param(self):
         super().create_param()
@@ -253,7 +252,5 @@ class Dense(ParametricLayer):
 
 
 class DenseParam():
-    weight = None
-    weight_type = None
-
-    bias = None
+    weight  = None
+    bias    = None

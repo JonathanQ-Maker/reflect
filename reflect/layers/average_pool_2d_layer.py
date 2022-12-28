@@ -108,8 +108,8 @@ class AvgPool2D(AbstractLayer):
 
         # base window view
         base_window_shape = (B, 
-                                 conv_size(in_h, h, 1),
-                                 conv_size(in_w, w, 1), 
+                                 conv_size(in_h, h, 1), # aka H, Left for intuitive understanding
+                                 conv_size(in_w, w, 1), # aka W
                                  h, w, C)
         base_window_stride = (in_h*in_w*C*size, 
                                 in_w*C*size, 

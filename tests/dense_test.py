@@ -267,7 +267,6 @@ class DenseTest(unittest.TestCase):
         self.assertTrue(param is not param2, "params the same instance")
         self.assertTrue(np.all(param.bias.shape == param2.bias.shape), "bias does not match")
         self.assertTrue(np.all(param.weight.shape == param2.weight.shape), "weights does not match")
-        self.assertTrue(param.weight_type == param2.weight_type, "weight types does not match")
 
         self.assertTrue(l.param_compatible(param), "generated param is not compatible")
 

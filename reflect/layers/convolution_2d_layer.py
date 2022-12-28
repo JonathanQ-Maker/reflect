@@ -367,7 +367,6 @@ class Convolve2D(ParametricLayer):
             raise ValueError(f'no such weight type "{type}"')
 
         param.kernel = np.random.normal(loc=weight_bias, scale=scale, size=self._kernel_shape)
-        param.weight_type = self._weight_type
 
     def init_base(self):
         """
@@ -430,7 +429,6 @@ class Convolve2D(ParametricLayer):
 
         self.init_kernel(param, self._weight_type, 0)
         param.bias  = np.zeros(self._kernels)
-        param.pad   = self._pad
         return param
 
     def regularizers_ok(self, kernel_regularizer, bias_regularizer):
@@ -457,9 +455,8 @@ class Convolve2D(ParametricLayer):
 
         bias_ok = (param.bias is not None) and param.bias.shape[0] == self._kernels
         kernel_ok = (param.kernel is not None) and param.kernel.shape == self._kernel_shape
-        pad_ok = param.pad is not None and param.pad == self._pad
 
-        return bias_ok and kernel_ok and pad_ok
+        return bias_ok and kernel_ok
 
     def apply_param(self, param: Convolve2DParam):
         """
@@ -487,7 +484,7 @@ class Convolve2D(ParametricLayer):
         """
         self._input = X
 
-        if (self.param.pad):
+        if (self._pad):
             np.copyto(self._padded_input_view, X)
             X = self._padded_input
         strides = self._window_stride * X.itemsize
@@ -516,6 +513,7 @@ class Convolve2D(ParametricLayer):
         # compute dldx gradient
         # NOTE: convolution on stride spaced dldz with 180 rotated kernel computes dldx
         np.copyto(self._base_view, dldz)
+        print(self._dldz_kernel_view)
         dldx = np.einsum('BHWhwK,KhwC->BHWC', self._base_window_view, 
                          self._kernel_rot180, optimize="optimal")
 
@@ -590,8 +588,5 @@ class Convolve2D(ParametricLayer):
 
 
 class Convolve2DParam():
-    kernel = None
-    weight_type = None
-    pad = None
-
-    bias = None
+    kernel  = None
+    bias    = None
