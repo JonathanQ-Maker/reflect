@@ -3,7 +3,7 @@ import os.path
 from matplotlib import pyplot
 from tests.MNIST import *
 from reflect.models import SequentialModel
-from reflect.layers import Relu, Dense, Convolve2D, Flatten, AvgPool2D
+from reflect.layers import Relu, Dense, Convolve2D, Flatten, AvgPool2D, TransposedConv2D
 from reflect.optimizers import *
 from reflect.regularizers import L2, L1
 import numpy as np
@@ -34,7 +34,10 @@ class MNISTConvolutionTest(unittest.TestCase):
         #    pyplot.imshow((cls.train_images[i].reshape(IMG_DIM, IMG_DIM) + 1) * 255, cmap=pyplot.get_cmap('gray'))
         #    print(cls.train_labels[i])
         #pyplot.show()
+        pass
 
+    def setUp(self):
+        np.random.seed(312)
 
     def test_convolution(self):
         print("test_convolution()")
@@ -118,6 +121,78 @@ class MNISTConvolutionTest(unittest.TestCase):
                 correct += 1
         accuracy = correct * 100.0 / test_examples
         print(f"test accuracy: {correct}/{test_examples}, {round(accuracy, 2)}%")
+
+    def test_auto_encoder(self):
+        steps = 1000
+        step = 0.001
+        kernels = 5
+        filter = 3
+        examples        = self.train_images.shape[0]
+        test_examples   = self.test_images.shape[0]
+        accpeted_loss   = 100
+        
+        examples = np.minimum(5000, examples)
+        test_examples = np.minimum(1000, test_examples)
+
+        model = SequentialModel((IMG_DIM, IMG_DIM, 1))
+        model.add(Convolve2D(filter, kernels, kernel_reg=L2()))         # 0
+        model.add(Relu())                                               # 1
+        model.add(AvgPool2D(3, 1))                                      # 2
+        model.add(Convolve2D(filter, kernels, kernel_reg=L2()))         # 3
+        model.add(Relu())                                               # 4
+
+        model.add(TransposedConv2D(filter, kernels, kernel_reg=L2()))   # 5
+        model.add(Relu())                                               # 6
+        model.add(TransposedConv2D(3, kernels, 1, kernel_reg=L2()))     # 7
+        model.add(Relu())                                               # 8
+        model.add(TransposedConv2D(filter, 1, kernel_reg=L2()))         # 9
+
+        model.compile()
+        
+        self.assertTrue(model.output_shape == model.input_shape, 
+                        "auto encoder input-output shape diffr")
+
+        def loss(input, output):
+            residual = output - input
+            return np.dot(residual.flat, residual.flat)
+
+        def dldz(input, output):
+            return output - input
+
+        losses = np.zeros(examples)
+        try:
+            for t in range(steps):
+                i = np.random.randint(0, examples)
+                input = self.train_images[i]
+                input.shape = (1, IMG_DIM, IMG_DIM, 1)
+                model.forward(input)
+                model.backprop(dldz(input, model.output))
+                model.apply_grad(step)
+                losses[i] = loss(input, model.output)
+                if t % 100 == 0:
+                    count = np.maximum(np.count_nonzero(losses), 1)
+                    l = np.sum(losses)/count
+                    print(f"[{t}]:\tloss={l}")
+                    if (l < accpeted_loss):
+                        break
+        except KeyboardInterrupt:
+            pass
+
+        #for i in range(9):  
+        #    k = i * 2
+        #    output = model.forward(self.test_images[i])
+        #    output = output.view()
+        #    output.shape = (IMG_DIM, IMG_DIM)
+        #    pyplot.subplot(3, 3*2, 1 + k)
+        #    pyplot.imshow((output + 1) * 255, cmap=pyplot.get_cmap('gray'))
+        #    pyplot.subplot(3, 3*2, 2 + k)
+        #    pyplot.imshow((self.test_images[i] + 1) * 255, cmap=pyplot.get_cmap('gray'))
+        #pyplot.show()
+
+        count = np.maximum(np.count_nonzero(losses), 1)
+        l = np.sum(losses)/count
+        self.assertTrue(l < accpeted_loss, "loss higher than accpeted loss")
+
 
 if __name__ == '__main__':
     unittest.main()

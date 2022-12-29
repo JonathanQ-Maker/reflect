@@ -1,6 +1,7 @@
 from reflect.models.abstract_model import AbstractModel
 from reflect.layers.parametric_layer import ParametricLayer
 from reflect.layers.absrtact_layer import AbstractLayer
+from reflect.utils.misc import to_tuple
 
 class SequentialModel(AbstractModel):
     """Sequential forward model"""
@@ -28,6 +29,7 @@ class SequentialModel(AbstractModel):
             raise ValueError("can only add layers")
 
     def compile(self):
+        super().compile()
         input_size = self._input_size
         for layer in self._layers:
             layer.compile(input_size, self._batch_size)
