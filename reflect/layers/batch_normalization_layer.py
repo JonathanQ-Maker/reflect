@@ -276,6 +276,17 @@ class BatchNorm(ParametricLayer):
         return self._dldx
 
     def apply_grad(self, step, dldg=None, dldb=None):
+        """
+        Applies layer gradients
+        
+        NOTE: None gradients default to gradient computed in backprop()
+
+        Args:
+            step: gradient step size
+            dldg: gradient of loss with respect to gamma
+            dldb: gradient of loss with respect to bias
+        """
+
         if (dldg is None):
             dldg = self._dldg
         if (dldb is None):

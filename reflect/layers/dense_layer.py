@@ -72,7 +72,7 @@ class Dense(ParametricLayer):
         super().__init__()
         self._output_size       = units
         self.weight_type        = weight_type
-        self.weight_reg       = regularizer
+        self.weight_reg         = regularizer
         self.weight_optimizer   = weight_optimizer
         self.bias_optimizer     = bias_optimizer
         if weight_optimizer is None:
@@ -217,10 +217,14 @@ class Dense(ParametricLayer):
 
     def apply_grad(self, step, dldw=None, dldb=None):
         """
-        Applies layer param
+        Applies layer gradient
+
+        NOTE: None gradients default to gradient computed in backprop()
 
         Args:
-            param: parameter to be applied
+            step: gradient step size
+            dldw: gradient of loss with respect to weight
+            dldb: gradient of loss with respectto bias
         """
 
         if (dldw is None):

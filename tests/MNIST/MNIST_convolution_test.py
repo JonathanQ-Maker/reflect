@@ -135,12 +135,15 @@ class MNISTConvolutionTest(unittest.TestCase):
         test_examples = np.minimum(1000, test_examples)
 
         model = SequentialModel((IMG_DIM, IMG_DIM, 1))
+
+        # encoder 
         model.add(Convolve2D(filter, kernels, kernel_reg=L2()))         # 0
         model.add(Relu())                                               # 1
         model.add(AvgPool2D(3, 1))                                      # 2
         model.add(Convolve2D(filter, kernels, kernel_reg=L2()))         # 3
         model.add(Relu())                                               # 4
 
+        # decoder
         model.add(TransposedConv2D(filter, kernels, kernel_reg=L2()))   # 5
         model.add(Relu())                                               # 6
         model.add(TransposedConv2D(3, kernels, 1, kernel_reg=L2()))     # 7

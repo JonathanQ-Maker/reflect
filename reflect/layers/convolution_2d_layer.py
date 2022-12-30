@@ -502,10 +502,12 @@ class Convolve2D(ParametricLayer):
 
     def apply_grad(self, step, dldk=None, dldb=None):
         """
-        Applies gradients
+        Applies layer gradients
+        
+        NOTE: None gradients default to gradient computed in backprop()
 
         Args:
-            step: gradient step
+            step: gradient step size
             dldk: gradient of loss with respect to kernel
             dldb: gradient of loss with respect to bias
         """
