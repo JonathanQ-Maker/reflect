@@ -192,7 +192,9 @@ class Dense(ParametricLayer):
         Input instance will be kept and expected not to be modified between forward and backward pass
         """
         self._input = X
-        return np.add(np.dot(X, self.param.weight, out=self._output), self.param.bias, out=self._output)
+        np.dot(X, self.param.weight, out=self._output)
+        np.add(self._output, self.param.bias, out=self._output)
+        return self._readonly_output
 
     def backprop(self, dldz):
         """
@@ -213,7 +215,8 @@ class Dense(ParametricLayer):
             np.add(self._dldw, self.weight_reg.gradient(self.param.weight), out=self._dldw)
         if (self.bias_reg != None):
             np.add(self._dldb, self.bias_reg.gradient(self.param.bias), out=self._dldb)
-        return np.dot(dldz, self.param.weight.T, out=self._dldx)
+        np.dot(dldz, self.param.weight.T, out=self._dldx)
+        return self._readonly_dldx
 
     def apply_grad(self, step, dldw=None, dldb=None):
         """
