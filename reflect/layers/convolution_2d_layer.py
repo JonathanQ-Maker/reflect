@@ -199,6 +199,8 @@ class Convolve2D(ParametricLayer):
             self.apply_param(self.create_param())
 
     def is_compiled(self):
+        if (not super().is_compiled()):
+            return False
         kernel_shape_match = self._kernel_shape == self.compute_kernel_shape()
 
         dldk_ok = (self._dldk is not None 
@@ -233,8 +235,7 @@ class Convolve2D(ParametricLayer):
                          and self.bias_optimizer.is_compiled()
                          and self.bias_optimizer.shape == to_tuple(self.kernels))
 
-        return (super().is_compiled() 
-                and kernel_shape_match 
+        return (kernel_shape_match 
                 and regularizer_ok 
                 and dldk_ok and dldb_ok
                 and window_view_ok

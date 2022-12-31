@@ -181,6 +181,8 @@ class TransposedConv2D(ParametricLayer):
             self.apply_param(self.create_param())
 
     def is_compiled(self):
+        if (not super().is_compiled()):
+            return False
         kernel_shape_match = self._kernel_shape == self.compute_kernel_shape()
 
         dldk_ok = (self._dldk is not None 
@@ -206,8 +208,7 @@ class TransposedConv2D(ParametricLayer):
                          and self.bias_optimizer.shape == to_tuple(self.kernels))
 
 
-        return (super().is_compiled() 
-                and kernel_shape_match 
+        return (kernel_shape_match 
                 and dldk_ok and dldb_ok
                 and attributes_ok
                 and base_ok
