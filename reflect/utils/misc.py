@@ -17,6 +17,17 @@ def conv_size(size: int, kernel_size: int, stride: int=1):
     """
     return int((size - kernel_size) / stride + 1)
 
+def is_full_conv(size: int, kernel_size: int, stride: int=1):
+    """
+    Check if convolution could be done on the entire input size
+
+    size:           size of input over axis 
+    kernel_size:    size of kernel over axis
+    stride:         convolution stride over axis
+    """
+    n = (size - kernel_size) / float(stride) + 1.
+    return n % 1 == 0
+
 def in_conv_size(out: int, kernel_size: int, stride: int=1):
     """
     returns size of matrix nessesary to get 

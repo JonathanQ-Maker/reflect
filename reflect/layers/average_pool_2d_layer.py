@@ -146,18 +146,18 @@ class AvgPool2D(AbstractLayer):
         self.name = f"AvgPool2D {self._pool_size[0]}x{self._pool_size[1]}"
 
     def is_compiled(self):
-        window_view_ok = self._input_shape is not None
-        if window_view_ok:
-            stride, shape = self.compute_view_attr()
-            window_view_ok = (np.all(stride == self._window_stride) 
-                              and shape == self._window_shape)
+        if (not super().is_compiled()):
+            return False
+
+        stride, shape = self.compute_view_attr()
+        window_view_ok = (np.all(stride == self._window_stride) 
+                            and shape == self._window_shape)
         base_ok = (self._base_view is not None 
                    and self._base_view.shape == self._output_shape)
         scaled_dldz_ok = (self._scaled_dldz is not None
                           and self._scaled_dldz.shape == self._output_shape)
 
-        return (super().is_compiled() 
-                and window_view_ok
+        return (window_view_ok
                 and scaled_dldz_ok)
     
     def forward(self, X):
