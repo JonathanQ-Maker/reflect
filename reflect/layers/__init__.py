@@ -5,3 +5,4 @@ from reflect.layers.convolution_2d_layer import Convolve2D, Convolve2DParam
 from reflect.layers.transposed_convolution_2d import TransposedConv2D, TransposedConv2DParam
 from reflect.layers.flatten_layer import Flatten
 from reflect.layers.average_pool_2d_layer import AvgPool2D
+from reflect.layers.recurrent_layer import Recurrent, RecurrentParam
