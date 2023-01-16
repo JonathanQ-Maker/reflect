@@ -52,10 +52,10 @@ class MNISTtest(unittest.TestCase):
         test_examples = np.minimum(1000, test_examples)
 
         model = SequentialModel(IMG_LENGTH)
-        model.add(Dense(hidden_1, regularizer=L2(reg), 
+        model.add(Dense(hidden_1, weight_reg = L2(reg), 
                         weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent()))
         model.add(Relu())
-        model.add(Dense(10, regularizer=L2(reg), 
+        model.add(Dense(10, weight_reg = L2(reg), 
                         weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent()))
         # output shape: (# batch, # output)
         model.compile()
@@ -132,10 +132,10 @@ class MNISTtest(unittest.TestCase):
 
 
         model = SequentialModel(IMG_LENGTH)
-        model.add(Dense(hidden_1, regularizer=L2(reg), 
+        model.add(Dense(hidden_1, weight_reg = L2(reg), 
                         weight_optimizer=Momentum(), bias_optimizer=Momentum()))
         model.add(Relu())
-        model.add(Dense(10, regularizer=L2(reg), 
+        model.add(Dense(10, weight_reg = L2(reg), 
                         weight_optimizer=Momentum(), bias_optimizer=Momentum()))
         # output shape: (# batch, # output)
         model.compile()
@@ -213,10 +213,10 @@ class MNISTtest(unittest.TestCase):
 
 
         model = SequentialModel(IMG_LENGTH)
-        model.add(Dense(hidden_1, regularizer=L2(reg), 
+        model.add(Dense(hidden_1, weight_reg = L2(reg), 
                         weight_optimizer=RMSprop(), bias_optimizer=RMSprop()))
         model.add(Relu())
-        model.add(Dense(10, regularizer=L2(reg), 
+        model.add(Dense(10, weight_reg = L2(reg), 
                         weight_optimizer=RMSprop(), bias_optimizer=RMSprop()))
         # output shape: (# batch, # output)
         model.compile()
@@ -296,10 +296,10 @@ class MNISTtest(unittest.TestCase):
 
 
         model = SequentialModel(IMG_LENGTH)
-        model.add(Dense(hidden_1, regularizer=L2(reg), 
+        model.add(Dense(hidden_1, weight_reg = L2(reg), 
                         weight_optimizer=Adam(), bias_optimizer=Adam()))
         model.add(Relu())
-        model.add(Dense(10, regularizer=L2(reg), 
+        model.add(Dense(10, weight_reg = L2(reg), 
                         weight_optimizer=Adam(), bias_optimizer=Adam()))
         # output shape: (# batch, # output)
         model.compile()

@@ -1,6 +1,5 @@
 from __future__ import annotations
 from reflect.layers.absrtact_layer import AbstractLayer
-from reflect.optimizers import Adam
 from reflect.utils.misc import to_tuple, conv_size, in_conv_size
 from reflect import np
 

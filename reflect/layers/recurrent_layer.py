@@ -5,8 +5,8 @@ from reflect import np
 class Recurrent(AbstractRNN):
 
     weight_type     = None # weight initalization type
-    _weight_shape   = None # (input size, units) NOTE: tranposed
-    _hidden_shape   = None # hidden_weight shape, (units, units) NOTE: transposed
+    _weight_shape   = None # (input size, units)                    NOTE: transposed
+    _hidden_shape   = None # hidden_weight shape, (units, units)    NOTE: transposed
     _state_view     = None # current temporal state, or last time step output
     _state_shape    = None # (batch size, units)
 
@@ -92,6 +92,7 @@ class Recurrent(AbstractRNN):
 
         # debug activation function
         self.activate = np.random.normal(size=self._state_shape)
+        print("WARNING: fake activation")
 
 
         # compile history buffer
@@ -217,12 +218,12 @@ class Recurrent(AbstractRNN):
 
 
 class RecurrentStep():
-    X = None
-    state = None
+    X       = None # input of step
+    state   = None # hidden state of step
 
     def __init__(self, input_shape, state_shape):
-        self.X = np.zeros(input_shape)
-        self.state = np.zeros(state_shape)
+        self.X      = np.zeros(input_shape)
+        self.state  = np.zeros(state_shape)
 
 
 class RecurrentParam():

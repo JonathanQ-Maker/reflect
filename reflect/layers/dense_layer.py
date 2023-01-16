@@ -21,7 +21,7 @@ class Dense(ParametricLayer):
     _readonly_dldw      = None # read only dldw view
     _readonly_dldb      = None # read only dldw view
 
-    _weight_shape       = None # (num input, num output)
+    _weight_shape       = None # (num input, num output)    NOTE: transposed
     weight_type         = None # weight initialization type
     weight_reg          = None # weight regularizer
     bias_reg            = None # bias regularizer
@@ -64,7 +64,8 @@ class Dense(ParametricLayer):
     def __init__(self, 
                  units,
                  weight_type        = "he", 
-                 regularizer        = None, 
+                 weight_reg         = None,
+                 bias_reg           = None,
                  weight_optimizer   = None, 
                  bias_optimizer     = None):
 
@@ -72,7 +73,8 @@ class Dense(ParametricLayer):
         super().__init__()
         self._output_size       = units
         self.weight_type        = weight_type
-        self.weight_reg         = regularizer
+        self.weight_reg         = weight_reg
+        self.bias_reg           = bias_reg
         self.weight_optimizer   = weight_optimizer
         self.bias_optimizer     = bias_optimizer
         if weight_optimizer is None:
@@ -132,7 +134,7 @@ class Dense(ParametricLayer):
                 and bias_optimizer_ok)
         
 
-    def init_weight(self, param, type, weight_bias = 0):
+    def init_weight(self, param, type):
         """
         Initialize weight in param object
 
@@ -154,12 +156,12 @@ class Dense(ParametricLayer):
 
 
 
-        param.weight = np.random.normal(loc=weight_bias, scale=scale, size=self._weight_shape)
+        param.weight = np.random.normal(loc=0, scale=scale, size=self._weight_shape)
 
     def create_param(self):
         super().create_param()
         param = DenseParam()
-        self.init_weight(param, self.weight_type, 0)
+        self.init_weight(param, self.weight_type)
         param.bias = np.zeros(self._output_size)
         return param
 
@@ -211,9 +213,9 @@ class Dense(ParametricLayer):
         """
         np.dot(self._input.T, dldz, out=self._dldw)
         np.sum(dldz, axis=0, out=self._dldb)
-        if (self.weight_reg != None):
+        if (self.weight_reg is not None):
             np.add(self._dldw, self.weight_reg.gradient(self.param.weight), out=self._dldw)
-        if (self.bias_reg != None):
+        if (self.bias_reg is not None):
             np.add(self._dldb, self.bias_reg.gradient(self.param.bias), out=self._dldb)
         np.dot(dldz, self.param.weight.T, out=self._dldx)
         return self._readonly_dldx

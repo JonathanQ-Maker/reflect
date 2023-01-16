@@ -59,7 +59,7 @@ class MNISTConvolutionTest(unittest.TestCase):
         model.add(Convolve2D(filter, kernels, kernel_reg=L2()))
         model.add(Relu())
         model.add(Flatten())
-        model.add(Dense(10, regularizer=L2()))
+        model.add(Dense(10, weight_reg=L2()))
 
         model.compile()
         model.print_summary()
