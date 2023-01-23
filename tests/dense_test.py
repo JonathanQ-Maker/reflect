@@ -26,15 +26,15 @@ class DenseTest(unittest.TestCase):
         self.assertTrue(l.is_compiled(), "Dense layer is not compiled")
         print(str(l))
 
-        input = np.random.uniform(size=input_shape)
+        x = np.random.uniform(size=input_shape)
         target = np.random.uniform(size=output_shape)
     
-        output = l.forward(input)
+        output = l.forward(x)
         residual = output - target
         loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
         init_loss = loss
         for i in range(step_count):
-            output = l.forward(input)
+            output = l.forward(x)
             residual = output - target
             loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
             l.backprop(residual)
@@ -56,7 +56,7 @@ class DenseTest(unittest.TestCase):
         step = 0.0001
         step_count = 100
 
-        input = np.random.uniform(size=input_shape)
+        x = np.random.uniform(size=input_shape)
         target = np.random.uniform(size=output_shape)
     
         layers = []
@@ -71,7 +71,7 @@ class DenseTest(unittest.TestCase):
         init_loss = 0
         final_loss = 0
         for e in range(step_count):
-            output = input
+            output = x
             for i in range(len(layers)):
                 output = layers[i].forward(output)
                 self.assertTrue(np.std(output) > 0.1, "std at layer {i} is less than 0.1")
@@ -132,16 +132,16 @@ class DenseTest(unittest.TestCase):
         self.assertTrue(reg.grad.shape == l.weight_shape, 
                         "Regularizer grad.shape != weight.shape")
 
-        input = np.random.uniform(size=input_shape)
+        x = np.random.uniform(size=input_shape)
         target = np.random.uniform(size=output_shape)
     
         for d in [l, ctrl]:
-            output = d.forward(input)
+            output = d.forward(x)
             residual = output - target
             loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
             init_loss = loss
             for i in range(step_count):
-                output = d.forward(input)
+                output = d.forward(x)
                 residual = output - target
                 loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
                 d.backprop(residual)
@@ -196,16 +196,16 @@ class DenseTest(unittest.TestCase):
         self.assertTrue(reg.grad.shape == l.weight_shape, 
                         "Regularizer grad.shape != weight.shape")
 
-        input = np.random.uniform(size=input_shape)
+        x = np.random.uniform(size=input_shape)
         target = np.random.uniform(size=output_shape)
     
         for d in [l, ctrl]:
-            output = d.forward(input)
+            output = d.forward(x)
             residual = output - target
             loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
             init_loss = loss
             for i in range(step_count):
-                output = d.forward(input)
+                output = d.forward(x)
                 residual = output - target
                 loss = np.sum(residual ** 2) / (batch_size * output_shape[1])
                 d.backprop(residual)
@@ -272,13 +272,13 @@ class DenseTest(unittest.TestCase):
 
         np.copyto(param2.weight, param.weight)
 
-        input = np.random.uniform(size=l.input_shape)
+        x = np.random.uniform(size=l.input_shape)
         target = np.random.uniform(size=l.output_shape)
 
-        inital_output = np.copy(l.forward(input))
+        inital_output = np.copy(l.forward(x))
 
         for i in range(count):
-            output = l.forward(input)
+            output = l.forward(x)
             residual = output - target
             loss = np.sum(residual ** 2)
             if (i % 10 == 0):
@@ -286,9 +286,9 @@ class DenseTest(unittest.TestCase):
             l.backprop(residual)
             l.apply_grad(step)
 
-        param_output = np.copy(l.forward(input))
+        param_output = np.copy(l.forward(x))
         l.apply_param(param2)
-        param2_output = np.copy(l.forward(input))
+        param2_output = np.copy(l.forward(x))
 
         self.assertTrue(np.all(param_output != param2_output), 
                         "some param outputs are same")
@@ -311,18 +311,18 @@ class DenseTest(unittest.TestCase):
                   weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         l.compile(input_size, batch_size, gen_param=True)
 
-        input = np.random.uniform(size=l.input_shape)
+        x = np.random.uniform(size=l.input_shape)
         target = np.random.uniform(size=l.output_shape)
         weight_original = l.param.weight
         weight = np.copy(l.param.weight)
 
         def forward(W):
             l.param.weight = W
-            out = np.sum((target - l.forward(input))**2) / 2
+            out = np.sum((target - l.forward(x))**2) / 2
             l.param.weight = weight_original
             return out
 
-        residual = target - l.forward(input)
+        residual = target - l.forward(x)
         l.backprop(residual)
         real_grad = -l.dldw
 
@@ -345,18 +345,18 @@ class DenseTest(unittest.TestCase):
         l1.compile(input_size, batch_size, gen_param=True)
         l2.compile(output_size_1, batch_size, gen_param=True)
 
-        input = np.random.uniform(size=l1.input_shape)
+        x = np.random.uniform(size=l1.input_shape)
         target = np.random.uniform(size=l2.output_shape)
         weight_original = l1.param.weight
         weight = np.copy(l1.param.weight)
 
         def forward(W):
             l1.param.weight = W
-            out = np.sum((target - l2.forward(l1.forward(input)))**2) / 2
+            out = np.sum((target - l2.forward(l1.forward(x)))**2) / 2
             l1.param.weight = weight_original
             return out
 
-        residual = target - l2.forward(l1.forward(input))
+        residual = target - l2.forward(l1.forward(x))
         l1.backprop(l2.backprop(residual))
         real_grad = -l1.dldw
 
@@ -379,18 +379,18 @@ class DenseTest(unittest.TestCase):
         l1.compile(input_size, batch_size, gen_param=True)
         l2.compile(output_size_1, batch_size, gen_param=True)
 
-        input = np.random.uniform(size=l1.input_shape)
+        x = np.random.uniform(size=l1.input_shape)
         target = np.random.uniform(size=l2.output_shape)
         bias_original = l1.param.bias
         bias = np.copy(l1.param.bias)
 
         def forward(b):
             l1.param.bias = b
-            out = np.sum((target - l2.forward(l1.forward(input)))**2) / 2
+            out = np.sum((target - l2.forward(l1.forward(x)))**2) / 2
             l1.param.bias = bias_original
             return out
 
-        residual = target - l2.forward(l1.forward(input))
+        residual = target - l2.forward(l1.forward(x))
         l1.backprop(l2.backprop(residual))
         real_grad = -l1.dldb
 
@@ -408,14 +408,47 @@ class DenseTest(unittest.TestCase):
                   weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
         l.compile(input_size, batch_size, gen_param=True)
 
-        input = np.ones((batch_size, input_size))
+        x = np.ones((batch_size, input_size))
 
-        l.forward(input)
+        l.forward(x)
         l.backprop(np.ones((batch_size, output_size)))
         self.assertTrue(np.all(l.dldw == np.full(l.dldw.shape, batch_size)), 
                         "scale does not match expected")
         print("dense_grad_scale_test() passed")
 
+    def test_dense_num_grad_cache(self):
+        np.set_printoptions(precision=8)
+        input_size = 5
+        output_size = 3
+        batch_size = 2
+
+
+        l = Dense(output_size, "xavier",
+                  weight_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
+        l.compile(input_size, batch_size, gen_param=True)
+
+        x = np.random.uniform(size=l.input_shape)
+        x2 = np.random.uniform(size=l.input_shape)
+        target = np.random.uniform(size=l.output_shape)
+        weight_original = l.param.weight
+        weight = np.copy(l.param.weight)
+
+        def forward(W):
+            l.param.weight = W
+            out = np.sum((target - l.forward(x))**2) / 2
+            l.param.weight = weight_original
+            return out
+
+        cache = l.create_cache()
+
+        residual = target - l.forward(x)
+        l.forward(x2, out_cache=cache)
+        l.backprop(residual)
+        real_grad = -l.dldw
+
+        passed, msg = check_grad(forward, weight, real_grad)
+        self.assertTrue(passed, msg)
+        print("dense_num_grad_test() passed\n")
 
 
 

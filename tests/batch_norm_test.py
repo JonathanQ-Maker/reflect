@@ -280,6 +280,58 @@ class BatchNormTest(unittest.TestCase):
 
         print("batch_norm_dldx_approx_test_2D() passed")
 
+    def test_batch_norm_grad_cache(self):
+        np.random.seed(231)
+        N, D = 5, 3
+        x = 5 * np.random.randn(N, D) + 12
+        x2 = 5 * np.random.randn(N, D) + 12
+        gamma = np.random.randn(D)
+        beta = np.random.randn(D)
+        dout = np.random.randn(N, D)
+
+        bn = BatchNorm()
+        self.assertFalse(bn.is_compiled(), "is compiled before compiling")
+
+        bn.compile(D, N, gen_param=True)
+        self.assertTrue(bn.is_compiled(), "is not compiled after compiling")
+
+        bn.param.beta = beta
+        bn.param.gamma = gamma
+
+        def forward(x):
+            return bn.forward(x)
+
+        def forwardGamma(g):
+            bn.param.gamma = g
+            return bn.forward(x)
+
+        def forwardBeta(b):
+            bn.param.beta = b
+            return bn.forward(x)
+
+
+        bn.forward(x)
+        real_grad = bn.backprop(dout)
+
+    
+        passed, msg = check_grad(forward, x, real_grad, dout)
+        self.assertTrue(passed, msg)
+
+        bn.forward(x)
+        bn.backprop(dout)
+        passed, msg = check_grad(forwardGamma, gamma, bn.dldg.copy(), dout)
+        self.assertTrue(passed, msg)
+
+        cache = bn.create_cache()
+
+        bn.forward(x)
+        bn.forward(x2, out_cache=cache)
+        bn.backprop(dout)
+        passed, msg = check_grad(forwardBeta, beta, bn.dldb.copy(), dout)
+        self.assertTrue(passed, msg)
+
+        print("batch_norm_grad_test_2D() passed")
+
 
 
 if __name__ == '__main__':

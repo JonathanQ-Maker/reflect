@@ -20,7 +20,7 @@ class TransposedConvolve2DTest(unittest.TestCase):
         kernel_size = (h, w)
         strides = (s_h, s_w)
 
-        input = np.random.normal(size=input_shape)
+        x = np.random.normal(size=input_shape)
 
 
         l = TransposedConv2D(kernel_size, K, strides, "xavier", 
@@ -29,19 +29,19 @@ class TransposedConvolve2DTest(unittest.TestCase):
 
         dldz = np.random.normal(size=l.output_shape)
 
-        l.forward(input)
+        l.forward(x)
         l.backprop(dldz)
 
-        passed, msg = check_grad(l.forward, input, l.dldx, dldz)
+        passed, msg = check_grad(l.forward, x, l.dldx, dldz)
         self.assertTrue(passed, msg)
         
         original_k = l.param.kernel
         kernel = np.copy(l.param.kernel)
         def func(k):
             l.param.kernel = k
-            return l.forward(input)
+            return l.forward(x)
         l.param.kernel = original_k
-        l.forward(input)
+        l.forward(x)
         l.backprop(dldz)
 
         passed, msg = check_grad(func, kernel, l.dldk, dldz)
@@ -51,9 +51,9 @@ class TransposedConvolve2DTest(unittest.TestCase):
         bias = np.copy(l.param.bias)
         def func(b):
             l.param.bias = b
-            return l.forward(input)
+            return l.forward(x)
         l.param.bias = original_b
-        l.forward(input)
+        l.forward(x)
         l.backprop(dldz)
 
         passed, msg = check_grad(func, bias, l.dldb, dldz)
@@ -69,7 +69,7 @@ class TransposedConvolve2DTest(unittest.TestCase):
         kernel_size = (h, w)
         strides = (s_h, s_w)
 
-        input = np.random.normal(size=input_shape)
+        x = np.random.normal(size=input_shape)
 
 
         l = TransposedConv2D(kernel_size, K, strides, "xavier",
@@ -80,19 +80,19 @@ class TransposedConvolve2DTest(unittest.TestCase):
 
         dldz = np.random.normal(size=l.output_shape)
 
-        l.forward(input)
+        l.forward(x)
         l.backprop(dldz)
 
-        passed, msg = check_grad(l.forward, input, l.dldx, dldz)
+        passed, msg = check_grad(l.forward, x, l.dldx, dldz)
         self.assertTrue(passed, msg)
         
         original_k = l.param.kernel
         kernel = np.copy(l.param.kernel)
         def func(k):
             l.param.kernel = k
-            return l.forward(input)
+            return l.forward(x)
         l.param.kernel = original_k
-        l.forward(input)
+        l.forward(x)
         l.backprop(dldz)
 
         passed, msg = check_grad(func, kernel, l.dldk, dldz)
@@ -102,9 +102,9 @@ class TransposedConvolve2DTest(unittest.TestCase):
         bias = np.copy(l.param.bias)
         def func(b):
             l.param.bias = b
-            return l.forward(input)
+            return l.forward(x)
         l.param.bias = original_b
-        l.forward(input)
+        l.forward(x)
         l.backprop(dldz)
 
         passed, msg = check_grad(func, bias, l.dldb, dldz)
@@ -121,7 +121,7 @@ class TransposedConvolve2DTest(unittest.TestCase):
         filter_size     = (h, w)
         strides         = (s_h, s_w)
 
-        input = np.arange(np.prod(input_shape)).reshape(input_shape)
+        x = np.arange(np.prod(input_shape)).reshape(input_shape)
         expected_output = [[[[  1.], [  2.], [  8.], [ 10.], [ 15.]],
                             [[  4.], [  5.], [ 26.], [ 25.], [ 30.]],
                             [[ 16.], [ 26.], [ 84.], [ 66.], [ 84.]],
@@ -137,16 +137,69 @@ class TransposedConvolve2DTest(unittest.TestCase):
         self.assertTrue(l.output_shape == output_shape, 
                         "expected output shape and output shape does not match")
         self.assertTrue(l.output_shape[1] > H, 
-                        "output height not bigger than input height")
+                        "output height not bigger than x height")
         self.assertTrue(l.output_shape[2] > W, 
                         "output width not bigger than width")
 
         # fill kernel predictble values so output will be predictble
         kernel = np.ones(l.param.kernel.shape) * np.arange(1, h*w+1).reshape((h, w, 1))
         l.param.kernel = kernel
-        equal = np.array_equal(l.forward(input), expected_output)
+        equal = np.array_equal(l.forward(x), expected_output)
         self.assertTrue(equal, "output is not equals to expected output")
         
+    def test_grad_match_cache(self):
+        B, H, W, C = 5, 2, 2, 2
+        K, h, w = 4, 3, 3
+        s_h, s_w = 1, 1
+
+        input_size = (H, W, C)
+        input_shape = (B, H, W, C)
+        kernel_size = (h, w)
+        strides = (s_h, s_w)
+
+        x = np.random.normal(size=input_shape)
+        x2 = np.random.normal(size=input_shape)
+
+
+        l = TransposedConv2D(kernel_size, K, strides, "xavier", 
+                       kernel_optimizer=GradientDescent(), bias_optimizer=GradientDescent())
+        l.compile(input_size, B, gen_param=True)
+
+        dldz = np.random.normal(size=l.output_shape)
+
+        l.forward(x)
+        l.backprop(dldz)
+
+        passed, msg = check_grad(l.forward, x, l.dldx, dldz)
+        self.assertTrue(passed, msg)
+        
+        original_k = l.param.kernel
+        kernel = np.copy(l.param.kernel)
+        def func(k):
+            l.param.kernel = k
+            return l.forward(x)
+        l.param.kernel = original_k
+        l.forward(x)
+        l.backprop(dldz)
+
+        passed, msg = check_grad(func, kernel, l.dldk, dldz)
+        self.assertTrue(passed, msg)
+
+        original_b = l.param.bias
+        bias = np.copy(l.param.bias)
+        def func(b):
+            l.param.bias = b
+            return l.forward(x)
+        l.param.bias = original_b
+
+        cache = l.create_cache()
+
+        l.forward(x)
+        l.forward(x2, out_cache=cache)
+        l.backprop(dldz)
+
+        passed, msg = check_grad(func, bias, l.dldb, dldz)
+        self.assertTrue(passed, msg)
         
 
 
