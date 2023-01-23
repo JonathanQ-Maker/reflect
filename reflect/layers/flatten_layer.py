@@ -1,4 +1,4 @@
-from reflect.layers.absrtact_layer import AbstractLayer
+from reflect.layers.abstract_layer import AbstractLayer
 from reflect import np
 
 class Flatten(AbstractLayer):

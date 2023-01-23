@@ -93,6 +93,9 @@ class RecurrentTest(unittest.TestCase):
         passed, msg = check_grad(forward, original_bias, l.dldb, dldz)
         self.assertTrue(passed, msg)
 
+    # TODO: XOR test
+
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,4 +1,4 @@
-from reflect.layers.absrtact_layer import AbstractLayer
+from reflect.layers.abstract_layer import AbstractLayer
 from abc import abstractmethod
 
 class ParametricLayer(AbstractLayer):
@@ -36,6 +36,7 @@ class ParametricLayer(AbstractLayer):
     def compile(self, input_size, batch_size, gen_param=True):
         super().compile(input_size, batch_size)
 
+    @abstractmethod
     def apply_grad(self, step):
         """
         Applies graident to params.

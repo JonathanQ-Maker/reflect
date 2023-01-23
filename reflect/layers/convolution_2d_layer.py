@@ -1,11 +1,12 @@
 from __future__ import annotations
 from reflect.layers.parametric_layer import ParametricLayer
+from reflect.layers.cached_layer import CachedLayer, LayerCache
 from reflect import np
 from reflect.utils.misc import to_tuple, conv_size, in_conv_size
 from reflect.optimizers import Adam
 from math import ceil
 
-class Convolve2D(ParametricLayer):
+class Convolve2D(CachedLayer, ParametricLayer):
     """
     2D Convolution layer
 
@@ -28,9 +29,8 @@ class Convolve2D(ParametricLayer):
     pad                 = False # zero pad input to maintain spatial dimention
     weight_type         = None  # weight(kernel) initialization type
     _strides            = (1, 1)# (stride y, stride x), convolution strides
-    kernel_reg  = None
-    bias_reg    = None
-    _input              = None
+    kernel_reg          = None
+    bias_reg            = None
     _padded_input_shape = None  # input shape after padded
     _pad_size           = None  # (pad_H_top, pad_H_bot, pad_W_left, pad_W_right) amount padded along H and W axis
 
@@ -198,6 +198,8 @@ class Convolve2D(ParametricLayer):
         if (gen_param):
             self.apply_param(self.create_param())
 
+        self._cache = self.create_cache()
+
     def is_compiled(self):
         if (not super().is_compiled()):
             return False
@@ -336,8 +338,6 @@ class Convolve2D(ParametricLayer):
         pad_w   = w - 1
         in_h    = in_conv_size(H, h, 1)
         in_w    = in_conv_size(W, w, 1)
-        out_h   = conv_size(H, h, stride_h)
-        out_w   = conv_size(W, w, stride_w)
 
         # base
         base_shape = (B, in_h, in_w, K)
@@ -422,22 +422,39 @@ class Convolve2D(ParametricLayer):
         """
 
         super().apply_param(param)
+
+    def create_cache(self):
+        cache = Convolve2DCache()
+        cache._owner    = self
+        cache._X        = np.zeros(self._input_shape)
+        cache._kernel   = np.zeros(self._kernel_shape)
+        return cache
     
-    def forward(self, X):
+    def forward(self, X, out_cache: Convolve2DCache=None):
         """
-        forward pass with input
+        forward pass with input, write to out_cache
 
         Args:
-            X: input
+            X:  input
+
+            out_cache:  
+                cache object to be filled with forward cache for backprop, 
+                if None writes to default cache
 
         Returns: 
             output
-
-        Make copy of output if intended to be modified
-        Input instance will be kept and expected not to be modified between forward and backward pass
         """
-        self._input = X
 
+        if (out_cache is None):
+            out_cache = self._cache
+        
+        if (out_cache._owner is not self):
+            raise ValueError("out_cache does not belong to this layer")
+        
+        np.copyto(out_cache._X, X)
+        np.copyto(out_cache._kernel, self.param.kernel)
+
+        X = out_cache._X
         if (self.pad):
             np.copyto(self._padded_input_view, X)
             X = self._padded_input
@@ -451,32 +468,42 @@ class Convolve2D(ParametricLayer):
         np.add(self._output, self.param.bias, out=self._output)
         return self._output
 
-    def backprop(self, dldz):
+    def backprop(self, dldz, cache: Convolve2DCache=None):
         """
         backward pass to compute the gradients
 
         Args:
-            dldz: gradient of loss with respect to output
+            dldz:   
+                gradient of loss with respect to output
+            cache:  
+                cache from forward() to use for backprop,
+                if None default cache will be used for backprop
 
         Returns: 
-            dldx, gradient of loss with respect to input
-
-        Note:
-            expected to execute only once after forward
+            dldx: gradient of loss with respect to input
         """
+
+        if (cache is None):
+            cache = self._cache
+
+        if (cache._owner is not self):
+            raise ValueError("cache does not belong to this layer")
+
         # compute dldx gradient
         # NOTE: convolution on stride spaced dldz with 180 rotated kernel computes dldx
-        kernel_rot180 = np.rot90(self.param.kernel, k=2, axes=(1, 2))
+        kernel_rot180 = np.rot90(cache._kernel, k=2, axes=(1, 2))
         np.copyto(self._base_view, dldz)
         dldx = np.einsum('BHWhwK,KhwC->BHWC', self._base_window_view, 
                          kernel_rot180, optimize="optimal")
 
         # compute dldk gradient
-        input = self._input
+
+        X = cache._X
         if (self.pad):
-            input = self._padded_input
-        strides = self._dldz_window_stride * input.itemsize
-        view = np.lib.stride_tricks.as_strided(input, 
+            np.copyto(self._padded_input_view, X)
+            X = self._padded_input
+        strides = self._dldz_window_stride * X.itemsize
+        view = np.lib.stride_tricks.as_strided(X, 
                                                shape=self._dldz_window_shape, 
                                                strides=strides,
                                                writeable=False)
@@ -541,8 +568,10 @@ class Convolve2D(ParametricLayer):
 
 
 
-
-
 class Convolve2DParam():
     kernel  = None
     bias    = None
+
+class Convolve2DCache(LayerCache):
+    _X      = None
+    _kernel = None

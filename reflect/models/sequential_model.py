@@ -1,6 +1,6 @@
 from reflect.models.abstract_model import AbstractModel
 from reflect.layers.parametric_layer import ParametricLayer
-from reflect.layers.absrtact_layer import AbstractLayer
+from reflect.layers.abstract_layer import AbstractLayer
 from reflect.utils.misc import to_tuple
 
 class SequentialModel(AbstractModel):

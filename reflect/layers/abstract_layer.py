@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from reflect.compiled_object import CompiledObject
 from reflect import np
 from reflect.utils.misc import to_tuple
@@ -93,6 +93,7 @@ class AbstractLayer(CompiledObject):
                 and dldx_ok
                 and output_ok)
 
+    @abstractmethod
     def forward(self, X):
         """
         forward pass with input
@@ -104,10 +105,10 @@ class AbstractLayer(CompiledObject):
             output
 
         Make copy of output if intended to be modified
-        Input instance will be kept and expected not to be modified between forward and backward pass
         """
-        return 0
+        pass
 
+    @abstractmethod
     def backprop(self, dldz):
         """
         backward pass to compute the gradients
@@ -117,11 +118,8 @@ class AbstractLayer(CompiledObject):
 
         Returns: 
             dldx, gradient of loss with respect to input
-
-        Note:
-            expected to execute only once after forward
         """
-        return 1
+        pass
 
     def __str__(self):
         return self.attribute_to_str()

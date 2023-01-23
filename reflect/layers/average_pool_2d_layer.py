@@ -1,5 +1,5 @@
 from __future__ import annotations
-from reflect.layers.absrtact_layer import AbstractLayer
+from reflect.layers.abstract_layer import AbstractLayer
 from reflect.utils.misc import to_tuple, conv_size, in_conv_size
 from reflect import np
 
@@ -170,7 +170,6 @@ class AvgPool2D(AbstractLayer):
             output
 
         Make copy of output if intended to be modified
-        Input instance will be kept and expected not to be modified between forward and backward pass
         """
         strides = self._window_stride * X.itemsize
         view = np.lib.stride_tricks.as_strided(X, shape=self._window_shape, 

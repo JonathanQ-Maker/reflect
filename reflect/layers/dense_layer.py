@@ -1,10 +1,11 @@
 from __future__ import annotations
 from reflect.layers.parametric_layer import ParametricLayer
+from reflect.layers.cached_layer import CachedLayer, LayerCache
 from reflect.optimizers import Adam
 from reflect.utils.misc import to_tuple
 from reflect import np
 
-class Dense(ParametricLayer):
+class Dense(CachedLayer, ParametricLayer):
 
     """
     Dense layer
@@ -13,8 +14,6 @@ class Dense(ParametricLayer):
         input:  (batch size, input size)
         output: (batch size, output size)
     """
-
-    _input              = None
 
     _dldw               = None # gradient of loss with respect to weights
     _dldb               = None # gradient of loss with respect to bias
@@ -40,14 +39,6 @@ class Dense(ParametricLayer):
     @property
     def weight_shape(self):
         return self._weight_shape
-
-    @property
-    def input(self):
-        if (self._input is None):
-            return None
-        view = self._input.view()
-        view.flags.writeable = False
-        return view
 
     @property
     def units(self):
@@ -77,10 +68,15 @@ class Dense(ParametricLayer):
         self.bias_reg           = bias_reg
         self.weight_optimizer   = weight_optimizer
         self.bias_optimizer     = bias_optimizer
+
+        # init optimizers
         if weight_optimizer is None:
             self.weight_optimizer   = Adam()
         if bias_optimizer is None:
             self.bias_optimizer     = Adam()
+
+        # init cache
+        self._cache = DenseCache()
 
     def compile(self, input_size, batch_size=1, gen_param=True):
         super().compile(input_size, batch_size, gen_param)
@@ -108,6 +104,8 @@ class Dense(ParametricLayer):
         if (gen_param):
             self.apply_param(self.create_param())
 
+        self._cache = self.create_cache()
+
     def is_compiled(self):
         weight_shape_match = self._weight_shape == (self._input_size, self._output_size)
         dldw_ok = self._dldw is not None and self._dldw.shape == self._weight_shape
@@ -132,7 +130,6 @@ class Dense(ParametricLayer):
                 and dldb_ok
                 and weight_optimizer_ok
                 and bias_optimizer_ok)
-        
 
     def init_weight(self, param, type):
         """
@@ -179,45 +176,77 @@ class Dense(ParametricLayer):
         bias_ok = (param.bias is not None) and param.bias.shape[0] == self._output_size
         weight_ok = (param.weight is not None) and param.weight.shape == self._weight_shape
         return bias_ok and weight_ok
-    
-    def forward(self, X):
+
+    def create_cache(self):
         """
-        forward pass with input
+        Create and return empty cache
+
+        Return:
+            cache
+        """
+
+        cache = DenseCache()
+        cache._owner    = self
+        cache._X        = np.zeros(self._input_shape)
+        cache._weight   = np.zeros(shape=self._weight_shape)
+        return cache
+    
+    def forward(self, X, out_cache: DenseCache=None):
+        """
+        forward pass with input, write to out_cache
 
         Args:
-            X: input
+            X:  input
+
+            out_cache:  
+                cache object to be filled with forward cache for backprop, 
+                if None writes to default cache
 
         Returns: 
             output
-
-        Make copy of output if intended to be modified
-        Input instance will be kept and expected not to be modified between forward and backward pass
         """
-        self._input = X
+        
+        if (out_cache is None):
+            out_cache = self._cache
+        
+        if (out_cache._owner is not self):
+            raise ValueError("out_cache does not belong to this layer")
+
+        np.copyto(out_cache._X, X)
+        np.copyto(out_cache._weight, self.param.weight)
+
         np.dot(X, self.param.weight, out=self._output)
         np.add(self._output, self.param.bias, out=self._output)
         return self._readonly_output
 
-    def backprop(self, dldz):
+    def backprop(self, dldz, cache: DenseCache=None):
         """
         backward pass to compute the gradients
 
         Args:
-            dldz: gradient of loss with respect to output
+            dldz:   
+                gradient of loss with respect to output
+            cache:  
+                cache from forward() to use for backprop,
+                if None default cache will be used for backprop
 
         Returns: 
-            dldx, gradient of loss with respect to input
-
-        Note:
-            expected to execute only once after forward
+            dldx: gradient of loss with respect to input
         """
-        np.dot(self._input.T, dldz, out=self._dldw)
+        
+        if (cache is None):
+            cache = self._cache
+        
+        if (cache._owner is not self):
+            raise ValueError("cache does not belong to this layer")
+
+        np.dot(cache._X.T, dldz, out=self._dldw)
         np.sum(dldz, axis=0, out=self._dldb)
-        if (self.weight_reg is not None):
+        if (self.weight_reg is not None): 
             np.add(self._dldw, self.weight_reg.gradient(self.param.weight), out=self._dldw)
         if (self.bias_reg is not None):
             np.add(self._dldb, self.bias_reg.gradient(self.param.bias), out=self._dldb)
-        np.dot(dldz, self.param.weight.T, out=self._dldx)
+        np.dot(dldz, cache._weight.T, out=self._dldx)
         return self._readonly_dldx
 
     def apply_grad(self, step, dldw=None, dldb=None):
@@ -229,7 +258,7 @@ class Dense(ParametricLayer):
         Args:
             step: gradient step size
             dldw: gradient of loss with respect to weight
-            dldb: gradient of loss with respectto bias
+            dldb: gradient of loss with respect to bias
         """
 
         if (dldw is None):
@@ -260,8 +289,10 @@ class Dense(ParametricLayer):
 
 
 
-
-
 class DenseParam():
     weight  = None
     bias    = None
+
+class DenseCache(LayerCache):
+    _X      = None
+    _weight = None

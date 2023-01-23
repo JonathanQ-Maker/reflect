@@ -3,10 +3,12 @@ from reflect.layers import TransposedConv2D, Convolve2DParam
 from reflect.profiler import num_grad, check_grad
 from reflect.optimizers import GradientDescent
 from reflect.utils.misc import in_conv_size
-import time
 import unittest
 
 class TransposedConvolve2DTest(unittest.TestCase):
+
+    def setUp(self):
+        np.random.seed(312)
 
     def test_grad_match(self):
         B, H, W, C = 5, 2, 2, 2

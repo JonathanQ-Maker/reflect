@@ -159,6 +159,9 @@ class Recurrent(AbstractRNN):
         bias_ok = (param.bias is not None and param.bias.shape[0] == self._output_size)
         return weight_ok and hidden_ok and bias_ok
 
+    def create_cache(self):
+        pass
+
 
     def forward(self, X, inital_state=None):
         if (inital_state is not None):
@@ -184,6 +187,8 @@ class Recurrent(AbstractRNN):
         return self._readonly_output
 
     def backprop(self, dldz):
+        # https://machinelearningmastery.com/gentle-introduction-backpropagation-time/
+
         # clear gradients
         np.copyto(self._dlds, 0)
         np.copyto(self._dldw, 0)
@@ -215,6 +220,9 @@ class Recurrent(AbstractRNN):
             # dlds
             np.dot(self._dlds, self.param.hidden_weight.T, out=self._dlds)
         return self._readonly_dldx
+
+    def apply_grad(self, step, dldw=None, dldb=None, dldh=None):
+        pass
 
 
 class RecurrentStep():

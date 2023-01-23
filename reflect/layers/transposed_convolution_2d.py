@@ -1,10 +1,11 @@
 from __future__ import annotations
 from reflect.layers.parametric_layer import ParametricLayer
+from reflect.layers.cached_layer import CachedLayer, LayerCache
 from reflect.optimizers import Adam
 from reflect import np
 from reflect.utils.misc import to_tuple, conv_size, in_conv_size
 
-class TransposedConv2D(ParametricLayer):
+class TransposedConv2D(CachedLayer, ParametricLayer):
 
     """
     Transpose 2D Convolution layer
@@ -24,7 +25,6 @@ class TransposedConv2D(ParametricLayer):
     _kernel_shape       = None  # (num kernel, height, width, channel)
     weight_type         = None  # weight initialization type
     _strides            = (1, 1)# (stride y, stride x), convolution strides
-    _input              = None
 
     _dldk               = None  # gradient of loss with respect to kernel
     _dldb               = None  # gradient of loss with respect to bias
@@ -38,15 +38,23 @@ class TransposedConv2D(ParametricLayer):
     bias_optimizer      = None
 
     # internal variables
-    _base               = None  # array used for forward and backprop
-    _base_core_view     = None  # view used for placing input onto base
-    _base_window_view   = None  # base viewed as convolution windows
+    _base_shape         = None
+    _pad_h              = None
+    _pad_w              = None
+    _H_b                = None
+    _W_b                = None
+    _core_stride        = None
+
+    _base_kernel_window_shape   = None
+    _base_window_stride         = None
+    _base_dldz_window_shape     = None
+
 
     # dldz-kernel view attributes
-    _dldz_kernel_shape  = None 
+    _dldz_kernel_shape  = None
     _dldz_kernel_stride = None
 
-    # dldz window view attributes
+    # dldz & kernel window view attributes
     _dldz_window_shape  = None
     _dldz_window_stride = None
 
@@ -75,14 +83,6 @@ class TransposedConv2D(ParametricLayer):
         self._strides = strides
         if isinstance(strides, int):
             self._strides = (strides, strides)
-
-    @property
-    def input(self):
-        if (self._input is None):
-            return None
-        view = self._input.view()
-        view.flags.writeable = False
-        return view
 
     @property
     def dldk(self):
@@ -164,7 +164,18 @@ class TransposedConv2D(ParametricLayer):
         self._dldz_window_shape     = attributes[2]
         self._dldz_window_stride    = attributes[3]
 
-        self.init_base()
+        # compile base attributes
+        base_attr = self.compute_base_attr()
+        self._base_shape = base_attr[0]
+        # base_input_view attrbutes, view used to copy input into base
+        self._pad_h, self._pad_w, self._H_b, self._W_b, self._core_stride = base_attr[1:6]
+        # base_kernel_window_view attribute, base & kernel window view
+        self._base_kernel_window_shape = base_attr[6]
+        # shared stride for base_kernel_window_view and 
+        self._base_window_stride = base_attr[7]
+        # base_dldz_window_view attribute, base & dldz-kernel window view
+        self._base_dldz_window_shape = base_attr[8]
+
 
         # compile regularizers
         if (self.kernel_reg is not None):
@@ -179,6 +190,8 @@ class TransposedConv2D(ParametricLayer):
         self.name = f"{self.kernels} TransposedConv2D {self._filter_size[0]}x{self._filter_size[1]}"
         if (gen_param):
             self.apply_param(self.create_param())
+
+        self._cache = self.create_cache()
 
     def is_compiled(self):
         if (not super().is_compiled()):
@@ -196,8 +209,8 @@ class TransposedConv2D(ParametricLayer):
                          and np.array_equal(self._dldz_window_shape, attributes[2])
                          and np.array_equal(self._dldz_window_stride, attributes[3]))
 
-        base_ok = (self._base_core_view is not None 
-                   and self._base_core_view.shape == self._input_shape)
+        #base_ok = (self._base_input_view is not None 
+        #           and self._base_input_view.shape == self._input_shape)
 
         kernel_optimizer_ok = (self.kernel_optimizer is not None
                          and self.kernel_optimizer.is_compiled()
@@ -211,7 +224,7 @@ class TransposedConv2D(ParametricLayer):
         return (kernel_shape_match 
                 and dldk_ok and dldb_ok
                 and attributes_ok
-                and base_ok
+                #and base_ok
                 and kernel_optimizer_ok
                 and bias_optimizer_ok)
 
@@ -247,9 +260,9 @@ class TransposedConv2D(ParametricLayer):
                 in_conv_size(self._input_size[1], self._filter_size[1], self._strides[1]),
                 self.kernels)
 
-    def init_base(self):
+    def compute_base_attr(self):
         B, H, W, C  = self._input_shape
-        K, h, w, _  = self._kernel_shape
+        _, h, w, _  = self._kernel_shape
         stride_h = self._strides[0]
         stride_w = self._strides[1]
 
@@ -263,28 +276,27 @@ class TransposedConv2D(ParametricLayer):
         W_b = in_conv_size(in_w, w, 1)
 
         base_shape = (B, H_b, W_b, C)
-        self._base = np.zeros(base_shape)
-        size = self._base.itemsize
+        size = 8
 
         pad_h           = h - 1
         pad_w           = w - 1
-        base_core       = self._base[:, pad_h:H_b-pad_h, pad_w:W_b-pad_w, :]
-        core_strides    = (H_b*W_b*C*size, stride_h*W_b*C*size, stride_w*C*size, size)
-        self._base_core_view = np.lib.stride_tricks.as_strided(base_core, shape=self._input_shape, 
-                                                         strides=core_strides, writeable=True)
+        core_stride     = (H_b*W_b*C*size, stride_h*W_b*C*size, stride_w*C*size, size)
+
         # base & kernel window view
-        base_window_shape       = (B, in_h, in_w, h, w, C)
+        base_kernel_window_shape       = (B, in_h, in_w, h, w, C)
         base_window_stride      = (H_b*W_b*C*size, 
                                    W_b*C*size, C*size, 
                                    W_b*C*size, C*size, 
                                    size)
-        self._base_kernel_window_view  = np.lib.stride_tricks.as_strided(self._base, shape=base_window_shape, 
-                                                          strides=base_window_stride, writeable=False)
 
         # base & dldz-kernel window view
-        base_window_shape       = (B, h, w, in_h, in_w, C)
-        self._base_dldz_window_view  = np.lib.stride_tricks.as_strided(self._base, shape=base_window_shape, 
-                                                          strides=base_window_stride, writeable=False)
+        base_dldz_window_shape       = (B, h, w, in_h, in_w, C)
+
+        return (base_shape,
+                pad_h, pad_w, H_b, W_b, core_stride,
+                base_kernel_window_shape, 
+                base_window_stride, 
+                base_dldz_window_shape)
 
     def compute_view_attr(self):
         B, H, W, C  = self._input_shape
@@ -338,45 +350,91 @@ class TransposedConv2D(ParametricLayer):
         """
 
         super().apply_param(param)
-    
-    def forward(self, X):
+
+    def create_cache(self):
         """
-        forward pass with input
+        Create and return empty cache
+
+        Return:
+            cache
+        """
+        cache = TransposedConv2DCache()
+        cache._owner = self
+        cache._base  = np.zeros(self._base_shape)
+        base_core = cache._base[:, self._pad_h:self._H_b-self._pad_h, 
+                                self._pad_w:self._W_b-self._pad_w, :]
+
+        # base input view
+        cache._base_input_view = np.lib.stride_tricks.as_strided(base_core, 
+            shape=self._input_shape, strides=self._core_stride)
+
+        # base & kernel window view
+        cache._base_kernel_window_view = np.lib.stride_tricks.as_strided(cache._base, 
+            shape=self._base_kernel_window_shape, strides=self._base_window_stride,
+            writeable=False)
+
+        # base & dldz-kernel window view
+        cache._base_dldz_window_view = np.lib.stride_tricks.as_strided(cache._base, 
+            shape=self._base_dldz_window_shape, strides=self._base_window_stride,
+            writeable=False)
+
+        cache._kernel = np.zeros(self._kernel_shape)
+        return cache
+    
+    def forward(self, X, out_cache: TransposedConv2DCache=None):
+        """
+        forward pass with input, write to out_cache
 
         Args:
-            X: input
+            X:  input
+
+            out_cache:  
+                cache object to be filled with forward cache for backprop, 
+                if None writes to default cache
 
         Returns: 
             output
-
-        Make copy of output if intended to be modified
-        Input instance will be kept and expected not to be modified between forward and backward pass
         """
 
-        # NOTE: stride 1 convolution on stride spaced input with 
+        if (out_cache is None):
+            out_cache = self._cache
+        
+        if (out_cache._owner is not self):
+            raise ValueError("out_cache does not belong to this layer")
+
+        # NOTE: stride 1 convolution on stride spaced input with
         # 180 rotated kernel computes output
-        self._input = X
-        np.copyto(self._base_core_view, self._input)
+        np.copyto(out_cache._base_input_view, X)
+        np.copyto(out_cache._kernel, self.param.kernel)
+
         kernel_rot180 = np.rot90(self.param.kernel, k=2, axes=(1, 2))
-        output = np.einsum('BHWhwc,khwc->BHWk', self._base_kernel_window_view, 
+        output = np.einsum('BHWhwc,khwc->BHWk', out_cache._base_kernel_window_view, 
                            kernel_rot180, optimize="optimal")
         np.copyto(self._output, output)
         np.add(self._output, self.param.bias, out=self._output)
         return self._readonly_output
 
-    def backprop(self, dldz):
+    def backprop(self, dldz, cache: TransposedConv2DCache=None):
         """
         backward pass to compute the gradients
 
         Args:
-            dldz: gradient of loss with respect to output
+            dldz:   
+                gradient of loss with respect to output
+            cache:  
+                cache from forward() to use for backprop,
+                if None default cache will be used for backprop
 
         Returns: 
-            dldx, gradient of loss with respect to input
-
-        Note:
-            expected to execute only once after forward
+            dldx: gradient of loss with respect to input
         """
+        
+        if (cache is None):
+            cache = self._cache
+
+        if (cache._owner is not self):
+            raise ValueError("cache does not belong to this layer")
+
         size = dldz.itemsize
 
         # NOTE: strided convolution on dldz with kernel
@@ -385,14 +443,14 @@ class TransposedConv2D(ParametricLayer):
                                                           strides=self._dldz_window_stride*size,
                                                           writeable=False)
         dldx = np.einsum('BHWhwK,KhwC->BHWC', dldz_window_view, 
-                         self.param.kernel, optimize="optimal")
+                         cache._kernel, optimize="optimal")
 
         # NOTE: stride 1 convolution on input with modified shape 
         # dldz-kernel computes dldk
         dldz_kernel_view = np.lib.stride_tricks.as_strided(dldz, shape=self._dldz_kernel_shape, 
                                                           strides=self._dldz_kernel_stride*size,
                                                           writeable=False)
-        dldk = np.einsum('BHWhwC,BKhw->KHWC', self._base_dldz_window_view, 
+        dldk = np.einsum('BHWhwC,BKhw->KHWC', cache._base_dldz_window_view, 
                             dldz_kernel_view, optimize="optimal")
         dldk = np.rot90(dldk, k=2, axes=(1, 2))
 
@@ -453,3 +511,11 @@ class TransposedConv2D(ParametricLayer):
 class TransposedConv2DParam():
     kernel  = None
     bias    = None
+
+class TransposedConv2DCache(LayerCache):
+    _base                   = None
+    _base_input_view        = None
+    _base_kernel_window_view= None 
+    _base_dldz_window_view  = None
+
+    _kernel                 = None

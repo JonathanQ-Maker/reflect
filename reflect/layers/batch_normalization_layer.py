@@ -1,10 +1,10 @@
 from __future__ import annotations
 from reflect.layers.parametric_layer import ParametricLayer
+from reflect.layers.cached_layer import CachedLayer, LayerCache
 from reflect import np
 from reflect.optimizers import Adam
-from reflect.utils.misc import to_tuple
 
-class BatchNorm(ParametricLayer):
+class BatchNorm(CachedLayer, ParametricLayer):
     """
     Batch Normalization layer
     normalize over all except last axis
@@ -13,8 +13,6 @@ class BatchNorm(ParametricLayer):
         input:  (batch size, ...)
         output: (batch size, ...)
     """
-
-    _input          = None
 
     _dldg           = None # gradient of loss with respect to gamma also output std
     _dldb           = None # gradient of loss with respect to beta also output mean
@@ -29,10 +27,7 @@ class BatchNorm(ParametricLayer):
     
     # intermediate terms, name not nessesarily accurate. 
     # maybe more accurate to call intermediate buffers
-    _std            = None # input std along axis
-    _mean           = None # input mean along axis
     _offset         = None
-    _factor         = None
     _residual       = None
     _residual_mean  = None
     _n              = None
@@ -42,15 +37,6 @@ class BatchNorm(ParametricLayer):
     _approx_dldx    = None # bool, use approx dldx. Reduceses backprop complexity and more accurate n -> inf
 
 
-
-    
-    @property
-    def input(self):
-        if (self._input is None):
-            return None
-        view = self._input.view()
-        view.flags.writeable = False
-        return view
 
     @property
     def dldg(self):
@@ -94,10 +80,7 @@ class BatchNorm(ParametricLayer):
         self._param_shape = (self._output_shape[-1], )
 
         # compile intermediate terms
-        self._std           = np.zeros(shape=self._param_shape)
-        self._mean          = np.zeros(shape=self._param_shape)
         self._offset        = np.zeros(shape=self._param_shape)
-        self._factor        = np.zeros(shape=self._param_shape)
         self._residual      = np.zeros(shape=self._input_shape)
         self._residual_mean = np.zeros(shape=self._param_shape)
         self._n             = np.prod(self._input_shape[:-1])
@@ -118,6 +101,8 @@ class BatchNorm(ParametricLayer):
         if (gen_param):
             self.apply_param(self.create_param())
 
+        self._cache = self.create_cache()
+
     def is_compiled(self):
         axis_ok = (self._input_shape is not None 
                    and self._axis == tuple(i for i in range(len(self._input_shape)-1)))
@@ -125,10 +110,7 @@ class BatchNorm(ParametricLayer):
                              and self._param_shape == (self._output_shape[-1], ))
 
         # intermediate terms
-        std_ok      = self._std is not None and self._std.shape == self._param_shape
-        mean_ok     = self._mean is not None and self._mean.shape == self._param_shape
         offset_ok   = self._offset is not None and self._offset.shape == self._param_shape
-        factor_ok   = self._factor is not None and self._factor.shape == self._param_shape
         dldg_ok     = self._dldg is not None and self._dldg.shape == self._param_shape
         dldb_ok     = self._dldb is not None and self._dldb.shape == self._param_shape
         residual_ok = (self._residual is not None 
@@ -145,10 +127,7 @@ class BatchNorm(ParametricLayer):
         return (super().is_compiled() 
                 and axis_ok 
                 and gamma_shape_match
-                and std_ok
-                and mean_ok
                 and offset_ok
-                and factor_ok
                 and dldg_ok
                 and dldb_ok
                 and residual_ok
@@ -175,43 +154,69 @@ class BatchNorm(ParametricLayer):
                        and param.momentum <= 1 
                        and param.momentum > 0)
         return gamma_ok and beta_ok and momentum_ok
-    
-    def forward(self, X, training=True):
-        """
-        return: output
 
-        Make copy of output if intended to be modified
-        Input instance will be kept and expected not to be modified between forward and backward pass
+    def create_cache(self):
+        cache = BatchNormCache()
+        cache._owner = self
+        cache._X        = np.zeros(self._input_shape)
+        cache._factor   = np.zeros(self._param_shape)
+        cache._mean     = np.zeros(self._param_shape)
+        cache._std      = np.zeros(self._param_shape)
+        return cache
+    
+    def forward(self, X, training=True, out_cache: BatchNormCache=None):
         """
-        self._input = X
+        forward pass with input, write to out_cache
+
+        Args:
+            X:  input
+
+            out_cache:  
+                cache object to be filled with forward cache for backprop, 
+                if None writes to default cache
+
+            training:
+                (bool) updates std and mean statistics
+
+        Returns: 
+            output
+        """
+
+        if (out_cache is None):
+            out_cache = self._cache
+        
+        if (out_cache._owner is not self):
+            raise ValueError("out_cache does not belong to this layer")
+
+        np.copyto(out_cache._X, X)
         std = self.param.std
         mean = self.param.mean
         if (training):
-            std     = self._std
-            mean    = self._mean
+            std     = out_cache._std
+            mean    = out_cache._mean
             
-            np.std(self._input, axis=self._axis, out=self._std)
-            np.mean(self._input, axis=self._axis, out=self._mean)
+            np.std(out_cache._X, axis=self._axis, out=out_cache._std)
+            np.mean(out_cache._X, axis=self._axis, out=out_cache._mean)
             
             # calc expoential moving average for test time statistics
             
             # running std
             np.multiply(self.param.momentum, self.param.std, out=self.param.std)
-            np.multiply(1 - self.param.momentum, std, out=self._factor)
-            np.add(self.param.std, self._factor, out=self.param.std)
+            np.multiply(1 - self.param.momentum, std, out=out_cache._factor)
+            np.add(self.param.std, out_cache._factor, out=self.param.std)
 
             # running mean
             np.multiply(self.param.momentum, self.param.mean, out=self.param.mean)
-            np.multiply(1 - self.param.momentum, mean, out=self._factor)
-            np.add(self.param.mean, self._factor, out=self.param.mean)
+            np.multiply(1 - self.param.momentum, mean, out=out_cache._factor)
+            np.add(self.param.mean, out_cache._factor, out=self.param.mean)
 
-        np.add(std, self.param.epsilon, out=self._std)
+        np.add(std, self.param.epsilon, out=out_cache._std)
 
-        np.divide(self.param.gamma, self._std, out=self._factor)
-        np.divide(self.param.beta, self._factor, out=self._offset)
+        np.divide(self.param.gamma, out_cache._std, out=out_cache._factor)
+        np.divide(self.param.beta, out_cache._factor, out=self._offset)
         np.subtract(mean, self._offset, out=self._offset)
-        np.subtract(self._input, self._offset, out=self._residual)
-        return np.multiply(self._residual, self._factor, out=self._output)
+        np.subtract(out_cache._X, self._offset, out=self._residual)
+        return np.multiply(self._residual, out_cache._factor, out=self._output)
 
         
     # # batch normalization gradient for x of shape (n, d) and (b, h, w, c)
@@ -228,50 +233,63 @@ class BatchNorm(ParametricLayer):
     #    + np.sum(dout * res, axis=axis) * (res + res_mean)/(s**2))/n)
     #    return dx
 
-    def backprop(self, dldz):
+    def backprop(self, dldz, cache: BatchNormCache=None):
         """
-        approx: approximate dldx, good when n is large where n = prod(input_shape[-1])
-        return: dldx, gradient of loss with respect to input
+        backward pass to compute the gradients
 
-        Make copy of dldg, dldb, dldx if intended to be modified
+        Args:
+            dldz:   
+                gradient of loss with respect to output
+            cache:  
+                cache from forward() to use for backprop,
+                if None default cache will be used for backprop
+
+        Returns: 
+            dldx: gradient of loss with respect to input
         """
+
+        if (cache is None):
+            cache = self._cache
+        
+        if (cache._owner is not self):
+            raise ValueError("cache does not belong to this layer")
 
         # dldb
         np.sum(dldz, axis=self._axis, out=self._dldb)
 
         if (self._approx_dldx):
             # approximate dldx
-            np.multiply(self._factor, dldz, out=self._dldx)
+            np.multiply(cache._factor, dldz, out=self._dldx)
 
             # dldg
-            np.subtract(self._input, self._mean, self._residual)
+            np.subtract(cache._X, cache._mean, self._residual)
             np.multiply(self._residual, dldz, out=self._residual)
             np.sum(self._residual, axis=self._axis, out=self._offset)
-            np.divide(self._offset, self._std, out=self._dldg)
+            np.divide(self._offset, cache._std, out=self._dldg)
             return self._dldx
 
         # dldx
-        np.subtract(self._input, self._mean, out=self._residual)
+        np.subtract(cache._X, cache._mean, out=self._residual)
         np.sum(self._residual, axis=self._axis, out=self._residual_mean)
         np.divide(self._residual_mean, self._n, out=self._residual_mean)
 
-        np.divide(self._residual_mean, self._std, out=self._offset)
+        np.divide(self._residual_mean, cache._std, out=self._offset)
         np.subtract(1, self._offset, out=self._offset)
         np.multiply(dldz, self._offset, out=self._dldx)
-        np.sum(self._dldx, axis=self._axis, out=self._mean)
+        np.sum(self._dldx, axis=self._axis, out=cache._mean)
 
         np.multiply(dldz, self._residual, out=self._dldx)
         np.sum(self._dldx, axis=self._axis, out=self._offset)
-        np.divide(self._offset, self._std, out=self._dldg)     # dldg
-        np.divide(self._dldg, self._std, out=self._offset)
+        np.divide(self._offset, cache._std, out=self._dldg)     # dldg
+        np.divide(self._dldg, cache._std, out=self._offset)
 
         np.add(self._residual, self._residual_mean, self._dldx)
         np.multiply(self._offset, self._dldx, out=self._dldx)
 
-        np.add(self._dldx, self._mean, out=self._dldx)
+        np.add(self._dldx, cache._mean, out=self._dldx)
         np.divide(self._dldx, self._n, out=self._dldx)
         np.subtract(dldz, self._dldx, out=self._dldx)
-        np.multiply(self._factor, self._dldx, out=self._dldx)
+        np.multiply(cache._factor, self._dldx, out=self._dldx)
   
         return self._dldx
 
@@ -323,3 +341,9 @@ class BatchNormParam():
     # expoential moving average for test time statistics
     std = None      # test time input std
     mean = None     # test time input mean
+
+class BatchNormCache(LayerCache):
+    _X      = None
+    _factor = None
+    _mean   = None
+    _std    = None
