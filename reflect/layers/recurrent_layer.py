@@ -1,31 +1,47 @@
 from __future__ import annotations
 from reflect.layers.abstract_rnn import AbstractRNN
+from reflect.layers.cached_layer import CachedLayer
+from reflect.layers.relu_layer import Relu
+from reflect.optimizers.adam import Adam
+from reflect.utils.misc import to_tuple
 from reflect import np
 
 class Recurrent(AbstractRNN):
 
-    weight_type     = None # weight initalization type
-    _weight_shape   = None # (input size, units)                    NOTE: transposed
-    _hidden_shape   = None # hidden_weight shape, (units, units)    NOTE: transposed
-    _state_view     = None # current temporal state, or last time step output
-    _state_shape    = None # (batch size, units)
+    weight_type         = None # weight initialization type
+    _weight_shape       = None # (input size, units)                    NOTE: transposed
+    _hidden_shape       = None # hidden_weight shape, (units, units)    NOTE: transposed
+    _state_view         = None # current temporal state, or last time step output
+    _state_shape        = None # (batch size, units)
 
-    _dldw           = None # gradient of loss with respect to weight
-    _dldh           = None # gtaident of loss with respect to hidden_weight
-    _dldb           = None # graident of loss with respect to bias
-    _dlds           = None # graident of loss with respect to state
+    _dldw               = None # gradient of loss with respect to weight
+    _dldh               = None # gtaident of loss with respect to hidden_weight
+    _dldb               = None # graident of loss with respect to bias
+    _dlds               = None # graident of loss with respect to state
 
     # readonly views of arrays
-    _readonly_dldw  = None
-    _readonly_dldh  = None
-    _readonly_dldb  = None
+    _readonly_dldw      = None
+    _readonly_dldh      = None
+    _readonly_dldb      = None
+
+    activation          = None # hidden activation layer
+    
+    # optimizers
+    weight_optimizer    = None
+    bias_optimizer      = None
+    hidden_optimizer    = None
+
+    # regularizers
+    weight_reg          = None # weight regularizer
+    bias_reg            = None # bias regularizer
+    hidden_reg          = None # hidden weight regularizer
 
     # internal variables
-    _step_dldw      = None # gradient of loss with respect to weight at time step
-    _step_dldh      = None # gradient of loss with respect to hidden weight at time step
-    _step_dldb      = None # gradient of loss with respect to bias at time step
+    _step_dldw          = None # gradient of loss with respect to weight at time step
+    _step_dldh          = None # gradient of loss with respect to hidden weight at time step
+    _step_dldb          = None # gradient of loss with respect to bias at time step
 
-    _hidden_result  = None # buffer to store result of Z@H
+    _hidden_result      = None # buffer to store result of Z@H
 
     @property
     def units(self):
@@ -53,11 +69,35 @@ class Recurrent(AbstractRNN):
 
     def __init__(self, 
                     units, 
-                    truncate_length = 5,
-                    weight_type     = "he"):
+                    truncate_length     = 5,
+                    activation          = None,
+                    weight_type         = "he",
+                    weight_optimizer    = None,
+                    bias_optimizer      = None,
+                    hidden_optimizer    = None,
+                    weight_reg          = None,
+                    bias_reg            = None,
+                    hidden_reg          = None):
         super().__init__(truncate_length)
-        self._output_size   = units
-        self.weight_type    = weight_type
+        self._output_size       = units
+        self.activation         = activation
+        self.weight_type        = weight_type
+        self.weight_optimizer   = weight_optimizer
+        self.bias_optimizer     = bias_optimizer
+        self.hidden_optimizer   = hidden_optimizer
+        self.weight_reg         = weight_reg
+        self.bias_reg           = bias_reg
+        self.hidden_reg         = hidden_reg
+
+        #if (self.activation is None):
+        #    self.activation = Relu()
+
+        if (self.weight_optimizer is None):
+            self.weight_optimizer   = Adam()
+        if (self.bias_optimizer is None):
+            self.bias_optimizer     = Adam()
+        if (self.hidden_optimizer is None):
+            self.hidden_optimizer   = Adam()
 
     def compile(self, input_size, batch_size, time_steps, gen_param=True):
         super().compile(input_size, batch_size, time_steps, gen_param)
@@ -90,20 +130,48 @@ class Recurrent(AbstractRNN):
 
         self._hidden_result = np.zeros(self._state_shape)
 
-        # debug activation function
-        self.activate = np.random.normal(size=self._state_shape)
-        print("WARNING: fake activation")
+        if (self.activation is not None):
+            self.activation.compile(self._output_size, self._batch_size)
 
+        # compile regularizers
+        if (self.weight_reg is not None):
+            self.weight_reg.compile(self._weight_shape)
+        if (self.bias_reg is not None):
+            self.bias_reg.compile(to_tuple(self._output_size))
+        if (self.hidden_reg is not None):
+            self.hidden_reg.compile(self._hidden_shape)
+
+        # compile optimizers
+        self.weight_optimizer.compile(self._weight_shape)
+        self.bias_optimizer.compile(self._output_size)
+        self.hidden_optimizer.compile(self._hidden_shape)
 
         # compile history buffer
         for i in range(self.truncate_length):
             self._history_buffer[i] = RecurrentStep(self._input_shape[1:], self._state_shape)
+
+        if (isinstance(self.activation, CachedLayer)):
+            for i in range(self.truncate_length):
+                self._history_buffer[i].activation_cache = self.activation.create_cache()
 
         # compile misc
         self.name = f"Recurrent {self._output_size}"
 
         if (gen_param):
             self.apply_param(self.create_param())
+
+    def is_compiled(self):
+        weight_shape_ok = (self._weight_shape is not None 
+                           and self._weight_shape == (self._input_size, self._output_size))
+        hidden_shape_ok = (self._hidden_shape is not None
+                         and self._hidden_shape == (self._output_size, self._output_size))
+        state_shape_ok = (self._state_shape is not None
+                          and self._state_shape == (self._batch_size, self._output_size))
+
+        return (super().is_compiled()
+                and weight_shape_ok
+                and hidden_shape_ok
+                and state_shape_ok)
 
     def init_weight(self, param: RecurrentParam):
         """
@@ -117,16 +185,19 @@ class Recurrent(AbstractRNN):
         """
 
 
-        scale = 1
+        weight_scale = 1
+        hidden_scale = 1
         if  (self.weight_type == "xavier"):
-            scale = 1 / np.sqrt(self._input_size) # Xavier init
+            weight_scale = 1 / np.sqrt(self._input_size) # Xavier init
+            hidden_scale = 1 / np.sqrt(self._output_size)
         elif (self.weight_type == "he"):
-            scale = np.sqrt(2 / self._input_size) # he init, for relus
+            weight_scale = np.sqrt(2 / self._input_size) # he init, for relus
+            hidden_scale = np.sqrt(2 / self._output_size)
         else:
             raise ValueError(f'no such weight type "{self.weight_type}"')
 
-        param.weight = np.random.normal(loc=0, scale=scale, size=self._weight_shape)
-        param.hidden_weight = np.random.normal(loc=0, scale=scale, 
+        param.weight = np.random.normal(loc=0, scale=weight_scale, size=self._weight_shape)
+        param.hidden_weight = np.random.normal(loc=0, scale=hidden_scale, 
                                                size=self._hidden_shape)
 
     def create_param(self):
@@ -159,15 +230,14 @@ class Recurrent(AbstractRNN):
         bias_ok = (param.bias is not None and param.bias.shape[0] == self._output_size)
         return weight_ok and hidden_ok and bias_ok
 
-    def create_cache(self):
-        pass
-
-
-    def forward(self, X, inital_state=None):
-        if (inital_state is not None):
+    def forward(self, X, initial_state=None):
+        if (initial_state is not None):
             state = self._history_buffer[self._current].state
-            np.copyto(state, inital_state)
+            np.copyto(state, initial_state)
             self._valid = 0
+        else:
+            state = self._history_buffer[self._current].state
+            np.copyto(state, self._output[-1])
 
         for i in range(self._timesteps):
             step        = self._history_buffer[self._current]
@@ -181,8 +251,13 @@ class Recurrent(AbstractRNN):
             np.dot(step.state, self.param.hidden_weight, out=self._hidden_result)
             np.add(step_output, self._hidden_result, out=step_output)
             np.add(step_output, self.param.bias, out=step_output)
-            # TODO: activation 
-            np.multiply(self.activate, step_output, out=step_output)
+
+            if (self.activation is not None):
+                if (isinstance(self.activation, CachedLayer)):
+                    self.activation.forward(step_output, out_cache=step.activation_cache)
+                else:
+                    self.activation.forward(step_output)
+                np.copyto(step_output, self.activation._output)
             self.update_current()
         return self._readonly_output
 
@@ -200,7 +275,13 @@ class Recurrent(AbstractRNN):
 
             step        = self._history_buffer[index]
             np.add(self._dlds, dldz[-1-i], out=self._dlds)
-            np.multiply(self._dlds, self.activate, out=self._dlds)
+
+            if (self.activation is not None):
+                if (isinstance(self.activation, CachedLayer)):
+                    self.activation.backprop(self._dlds, cache=step.activation_cache)
+                else:
+                    self.activation.backprop(self._dlds)
+                np.copyto(self._dlds, self.activation._dldx)
 
             # dldx
             np.dot(self._dlds, self.param.weight.T, out=self._dldx[-1-i])
@@ -219,15 +300,57 @@ class Recurrent(AbstractRNN):
 
             # dlds
             np.dot(self._dlds, self.param.hidden_weight.T, out=self._dlds)
+
+        if (self.weight_reg is not None): 
+            np.add(self._dldw, self.weight_reg.gradient(self.param.weight), out=self._dldw)
+        if (self.bias_reg is not None):
+            np.add(self._dldb, self.bias_reg.gradient(self.param.bias), out=self._dldb)
+        if (self.hidden_reg is not None): 
+            np.add(self._dldh, self.hidden_reg.gradient(self.param.hidden_weight), out=self._dldh)
         return self._readonly_dldx
 
     def apply_grad(self, step, dldw=None, dldb=None, dldh=None):
-        pass
+        """
+        Applies layer gradient
+
+        NOTE: None gradients default to gradient computed in backprop()
+
+        Args:
+            step: gradient step size
+            dldw: gradient of loss with respect to weight
+            dldb: gradient of loss with respect to bias
+            dldh: gradient of loss with respect to hidden_weight
+        """
+
+        if (dldw is None):
+            dldw = self._dldw
+        if (dldb is None):
+            dldb = self._dldb
+        if (dldh is None):
+            dldh = self._dldh
+
+        # average batch gradient
+        step = step / self._batch_size
+
+        # weight update
+        np.subtract(self.param.weight, self.weight_optimizer.gradient(step, dldw), 
+               out=self.param.weight)
+
+        # bias update
+        np.subtract(self.param.bias, self.bias_optimizer.gradient(step, dldb), 
+               out=self.param.bias)
+
+        # hidden_weight update
+        np.subtract(self.param.hidden_weight, self.hidden_optimizer.gradient(step, dldh), 
+               out=self.param.hidden_weight)
+
+
 
 
 class RecurrentStep():
-    X       = None # input of step
-    state   = None # hidden state of step
+    X                   = None # input of step
+    state               = None # hidden state of step
+    activation_cache    = None # cache of activation layer
 
     def __init__(self, input_shape, state_shape):
         self.X      = np.zeros(input_shape)
