@@ -1,28 +1,29 @@
 from reflect.layers.abstract_layer import AbstractLayer
 from reflect import np
 
-class Flatten(AbstractLayer):
+class Reshape(AbstractLayer):
+
     """
-    Flatten layer, flattens input
+    Reshape layer, reshape input
 
     Shape:
         input:  (batch size, ...)
-        output: (batch size, prod(input_size))
+        output: (batch size, input_size)
     """
 
     _flat_output    = None
     _flat_dldx      = None
 
-    def __init__(self):
+    def __init__(self, output_size):
+        self._output_size = output_size
         super().__init__()
 
 
     def compile(self, input_size, batch_size=1):
-        self._output_size = np.prod(input_size)
         super().compile(input_size, batch_size)
         self._flat_output   = self._output.ravel()
         self._flat_dldx     = self._dldx.ravel()
-        self.name           = "Flatten"
+        self.name           = f"Reshape {self._output_size}"
     
     def is_compiled(self):
         dldx_ok = self._dldx is not None and self._dldx.shape == self._input_shape
@@ -59,4 +60,3 @@ class Flatten(AbstractLayer):
         """
         np.copyto(self._flat_dldx, dldz.ravel())
         return self._readonly_dldx
-        

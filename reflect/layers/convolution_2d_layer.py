@@ -137,7 +137,9 @@ class Convolve2D(CachedLayer, ParametricLayer):
                  kernel_reg         = None,
                  bias_reg           = None,
                  kernel_optimizer   = None,
-                 bias_optimizer     = None):
+                 bias_optimizer     = None,
+                 kernel_clip        = None,
+                 bias_clip          = None):
 
         super().__init__()
         self.weight_type            = weight_type
@@ -149,6 +151,9 @@ class Convolve2D(CachedLayer, ParametricLayer):
         self.kernels                = kernels
         self.kernel_optimizer       = kernel_optimizer
         self.bias_optimizer         = bias_optimizer
+        self.kernel_clip            = kernel_clip
+        self.bias_clip              = bias_clip
+
         if kernel_optimizer is None:
             self.kernel_optimizer   = Adam()
         if bias_optimizer is None:
@@ -551,9 +556,13 @@ class Convolve2D(CachedLayer, ParametricLayer):
         # kernel update
         np.subtract(self.param.kernel, self.kernel_optimizer.gradient(step, dldk),
               out=self.param.kernel)
+        if (self.kernel_clip is not None):
+            np.clip(self.param.kernel, -self.kernel_clip, self.kernel_clip, out=self.param.kernel)
 
         # bias update
         np.subtract(self.param.bias, self.bias_optimizer.gradient(step, dldb), out=self.param.bias)
+        if (self.bias_clip is not None):
+            np.clip(self.param.bias, -self.bias_clip, self.bias_clip, out=self.param.bias)
 
     def attribute_to_str(self):
         return (super().attribute_to_str()

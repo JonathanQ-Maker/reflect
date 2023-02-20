@@ -1,6 +1,6 @@
 import unittest
 from reflect.layers import Recurrent, Relu
-from reflect.regularizers import L1, L2, L1L2
+from reflect.regularizers import L2
 import numpy as np
 from reflect.profiler import num_grad, check_grad
 
@@ -181,7 +181,7 @@ class RecurrentTest(unittest.TestCase):
                 l2.apply_grad(step_size)
                 l.apply_grad(step_size)
             print(f"loss: {total_loss}")
-            print(f"predicted seq: {np.maximum(predicted_seq, 0)}")
+            print(f"predicted seq: {np.maximum(predicted_seq, 0).astype(int)}")
             errors = np.sum(sequence != predicted_seq)
             print(f"Errors: {errors}")
             if (errors == 0):

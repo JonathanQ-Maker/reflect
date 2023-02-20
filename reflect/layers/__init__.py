@@ -6,3 +6,5 @@ from reflect.layers.transposed_convolution_2d import TransposedConv2D, Transpose
 from reflect.layers.flatten_layer import Flatten
 from reflect.layers.average_pool_2d_layer import AvgPool2D
 from reflect.layers.recurrent_layer import Recurrent, RecurrentParam
+from reflect.layers.reshape_layer import Reshape
+from reflect.layers.tanh_layer import Tanh

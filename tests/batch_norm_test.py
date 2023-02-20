@@ -161,8 +161,8 @@ class BatchNormTest(unittest.TestCase):
         gamma = np.random.randn(D)
         beta = np.random.randn(D)
         dout = np.random.randn(N, D)
-        count = 100
-        step = 0.001
+        count = 500
+        step = 0.01
 
         new_std = 2
         new_mean = -5
@@ -200,8 +200,8 @@ class BatchNormTest(unittest.TestCase):
         gamma = np.random.randn(C)
         beta = np.random.randn(C)
         dout = np.random.randn(B, H, W, C)
-        count = 100
-        step = 0.001
+        count = 500
+        step = 0.01
 
         new_std = 2
         new_mean = -5
@@ -331,6 +331,42 @@ class BatchNormTest(unittest.TestCase):
         self.assertTrue(passed, msg)
 
         print("batch_norm_grad_test_2D() passed")
+
+    def test_batch_norm_scale(self):
+        np.random.seed(231)
+        D = 3
+        x = 5 * np.random.randn(2, D) + 12
+        x4 = np.tile(x, (2,1))
+        x8 = np.tile(x, (4,1))
+        gamma = np.random.randn(D)
+        beta = np.random.randn(D)
+        dout = np.random.randn(2, D)
+        dout4 = np.tile(dout, (2,1))
+        dout8 = np.tile(dout, (4,1))
+
+        bn4 = BatchNorm()
+        bn4.compile(D, 4, gen_param=True)
+        self.assertTrue(bn4.is_compiled(), "is not compiled after compiling")
+        bn4.param.beta = beta
+        bn4.param.gamma = gamma
+        bn4.forward(x4)
+        bn4.backprop(dout4)
+
+        bn8 = BatchNorm()
+        bn8.compile(D, 8, gen_param=True)
+        self.assertTrue(bn8.is_compiled(), "is not compiled after compiling")
+        bn8.param.beta = beta
+        bn8.param.gamma = gamma
+        bn8.forward(x8)
+        bn8.backprop(dout8)
+
+        print(f"batchnorm dldg sum")
+        print(bn4.dldg)
+        print(bn8.dldg)
+        self.assertAlmostEqual(bn4.dldg.sum()*2, bn8.dldg.sum(), msg="gradient scale is not as expected")
+
+
+        
 
 
 

@@ -3,9 +3,9 @@ from reflect.layers.abstract_layer import AbstractLayer
 from reflect.layers.cached_layer import CachedLayer, LayerCache
 from reflect import np
 
-class Relu(CachedLayer, AbstractLayer):
+class Tanh(CachedLayer, AbstractLayer):
     """
-    Rectified Linear Activation Unit (RELU)
+    Tanh Activation
 
     Shape:
         input:  (batch size, ...)
@@ -19,7 +19,7 @@ class Relu(CachedLayer, AbstractLayer):
     def compile(self, input_size, batch_size):
         self._output_size = input_size
         super().compile(input_size, batch_size)
-        self.name = "Relu"
+        self.name = "Tanh"
 
         self._cache = self.create_cache()
     
@@ -28,12 +28,12 @@ class Relu(CachedLayer, AbstractLayer):
         return super().is_compiled() and dldx_ok
 
     def create_cache(self):
-        cache = ReluCache()
+        cache = TanhCache()
         cache._owner    = self
-        cache._output   = np.zeros(self._output_shape)
+        cache._X        = np.zeros(self._input_shape)
         return cache
 
-    def forward(self, X, out_cache: ReluCache=None):
+    def forward(self, X, out_cache: TanhCache=None):
         """
         forward pass with input, write to out_cache
 
@@ -54,11 +54,11 @@ class Relu(CachedLayer, AbstractLayer):
         if (out_cache._owner is not self):
             raise ValueError("out_cache does not belong to this layer")
 
-        np.maximum(X, 0, out=self._output)
-        np.copyto(out_cache._output, self._output)
+        np.copyto(out_cache._X, X)
+        np.tanh(out_cache._X, out=self._output)
         return self._readonly_output
 
-    def backprop(self, dldz, cache: ReluCache=None):
+    def backprop(self, dldz, cache: TanhCache=None):
         """
         backward pass to compute the gradients
 
@@ -79,9 +79,11 @@ class Relu(CachedLayer, AbstractLayer):
         if (cache._owner is not self):
             raise ValueError("cache does not belong to this layer")
 
-        np.multiply(np.greater(cache._output, 0, out=self._dldx), dldz, out=self._dldx)
+        np.cosh(cache._X, out=self._dldx)
+        np.square(self._dldx, out=self._dldx)
+        np.divide(dldz, self._dldx, out=self._dldx)
         return self._readonly_dldx
         
 
-class ReluCache(LayerCache):
-    _output = None
+class TanhCache(LayerCache):
+    _X = None

@@ -37,6 +37,9 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
     kernel_optimizer    = None
     bias_optimizer      = None
 
+    kernel_clip         = None
+    bias_clip           = None
+
     # internal variables
     _base_shape         = None
     _pad_h              = None
@@ -117,7 +120,9 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
                  kernel_reg         = None,
                  bias_reg           = None,
                  kernel_optimizer   = None,
-                 bias_optimizer     = None):
+                 bias_optimizer     = None,
+                 kernel_clip        = None,
+                 bias_clip          = None):
 
 
         super().__init__()
@@ -129,6 +134,9 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
         self.bias_reg               = bias_reg
         self.kernel_optimizer       = kernel_optimizer
         self.bias_optimizer         = bias_optimizer
+        self.kernel_clip            = kernel_clip
+        self.bias_clip              = bias_clip
+
         if kernel_optimizer is None:
             self.kernel_optimizer   = Adam()
         if bias_optimizer is None:
@@ -490,13 +498,18 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
         # kernel update
         np.subtract(self.param.kernel, self.kernel_optimizer.gradient(step, dldk),
               out=self.param.kernel)
+        if (self.kernel_clip is not None):
+            np.clip(self.param.kernel, -self.kernel_clip, self.kernel_clip, out=self.param.kernel)
 
         # bias update
         np.subtract(self.param.bias, self.bias_optimizer.gradient(step, dldb), out=self.param.bias)
+        if (self.bias_clip is not None):
+            np.clip(self.param.bias, -self.bias_clip, self.bias_clip, out=self.param.bias)
+
 
     def attribute_to_str(self):
         return (super().attribute_to_str()
-        + f"weight init:    {self._weight_type}\n"
+        + f"weight init:    {self.weight_type}\n"
         + f"max kernel:     {self.param.kernel.max()}\n"
         + f"min kernel:     {self.param.kernel.min()}\n"
         + f"kernel std:     {np.std(self.param.kernel)}\n"

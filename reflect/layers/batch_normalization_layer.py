@@ -97,7 +97,7 @@ class BatchNorm(CachedLayer, ParametricLayer):
         self.gamma_optimizer.compile(self._param_shape)
         self.bias_optimizer.compile(self._param_shape)
 
-        self._name = f"BatchNorm"
+        self.name = "BatchNorm"
         if (gen_param):
             self.apply_param(self.create_param())
 
@@ -304,6 +304,8 @@ class BatchNorm(CachedLayer, ParametricLayer):
             dldg: gradient of loss with respect to gamma
             dldb: gradient of loss with respect to bias
         """
+
+        step = step / self._batch_size
 
         if (dldg is None):
             dldg = self._dldg

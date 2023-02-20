@@ -28,6 +28,9 @@ class Dense(CachedLayer, ParametricLayer):
     weight_optimizer    = None
     bias_optimizer      = None
 
+    weight_clip         = None
+    bias_clip           = None
+
     @property
     def dldw(self):
         return self._readonly_dldw
@@ -58,7 +61,9 @@ class Dense(CachedLayer, ParametricLayer):
                  weight_reg         = None,
                  bias_reg           = None,
                  weight_optimizer   = None, 
-                 bias_optimizer     = None):
+                 bias_optimizer     = None,
+                 weight_clip        = None,
+                 bias_clip          = None):
 
 
         super().__init__()
@@ -68,6 +73,8 @@ class Dense(CachedLayer, ParametricLayer):
         self.bias_reg           = bias_reg
         self.weight_optimizer   = weight_optimizer
         self.bias_optimizer     = bias_optimizer
+        self.weight_clip        = weight_clip
+        self.bias_clip          = bias_clip
 
         # init optimizers
         if weight_optimizer is None:
@@ -272,10 +279,16 @@ class Dense(CachedLayer, ParametricLayer):
         # weight update
         np.subtract(self.param.weight, self.weight_optimizer.gradient(step, dldw), 
                out=self.param.weight)
+        if (self.weight_clip is not None):
+            np.clip(self.param.weight, -self.weight_clip, self.weight_clip, out=self.param.weight)
+
 
         # bias update
         np.subtract(self.param.bias, self.bias_optimizer.gradient(step, dldb), 
                out=self.param.bias)
+        if (self.bias_clip is not None):
+            np.clip(self.param.bias, -self.bias_clip, self.bias_clip, out=self.param.bias)
+
 
     def attribute_to_str(self):
         return (super().attribute_to_str()
