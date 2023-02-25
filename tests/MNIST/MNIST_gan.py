@@ -1,10 +1,10 @@
 import unittest
 from tests.MNIST import *
-from models import SequentialModel
-from layers import Relu, Dense, TransposedConv2D, Convolve2D, Flatten, BatchNorm, Reshape, Tanh
-from optimizers import *
-from regularizers import L2
-from constraints import Clip
+from reflect.models import SequentialModel
+from reflect.layers import Relu, Dense, TransposedConv2D, Convolve2D, Flatten, BatchNorm, Reshape, Tanh
+from reflect.optimizers import *
+from reflect.regularizers import L2
+from reflect.constraints import Clip
 from matplotlib import pyplot
 import numpy as np
 
