@@ -1,10 +1,10 @@
 import unittest
 from tests.MNIST import *
-from reflect.models import SequentialModel
-from reflect.layers import Relu, Dense, TransposedConv2D, Convolve2D, Flatten, BatchNorm, Reshape, Tanh
-from reflect.optimizers import *
-from reflect.regularizers import L2
-from reflect.profiler import check_grad
+from models import SequentialModel
+from layers import Relu, Dense, TransposedConv2D, Convolve2D, Flatten, BatchNorm, Reshape, Tanh
+from optimizers import *
+from regularizers import L2
+from constraints import Clip
 from matplotlib import pyplot
 import numpy as np
 
@@ -17,7 +17,7 @@ class MNISTGan(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        digit = 7
+        digit = 2
 
         # load train data
         train_images = load_MNIST_image(TRAIN_IMAGES_URL, TRAIN_IMAGES)
@@ -42,7 +42,7 @@ class MNISTGan(unittest.TestCase):
     def setUp(self):
         np.random.seed(312)
 
-    def gan_test(self):
+    def test(self):
         batch_size = 16
         epochs = 300
         discriminator_step = 0.00005
@@ -52,34 +52,29 @@ class MNISTGan(unittest.TestCase):
         ###########################
         # GENERATOR
         ###########################
-        clip = None
         generator = SequentialModel(input_size, batch_size)
         generator.add(Dense(units=7*7*128, weight_reg=L2(),
                                 weight_optimizer=RMSprop(), 
-                                weight_clip=clip,
-                                bias_clip=0))
+                                bias_constraint=Clip(0)))
         generator.add(Reshape(output_size=(7, 7, 128)))
         generator.add(BatchNorm(gamma_optimizer=RMSprop(), bias_optimizer=RMSprop()))
         generator.add(Relu())
         generator.add(TransposedConv2D(filter_size=(5, 5), kernels=128, 
                                        kernel_reg=L2(),
                                        kernel_optimizer=RMSprop(), 
-                                       kernel_clip=clip,
-                                       bias_clip=0))
+                                       bias_constraint=Clip(0)))
         generator.add(BatchNorm(gamma_optimizer=RMSprop(), bias_optimizer=RMSprop()))
         generator.add(Relu())
         generator.add(TransposedConv2D(filter_size=(5, 5), kernels=64, strides= (2, 2),
                                        kernel_reg=L2(),
                                        kernel_optimizer=RMSprop(), 
-                                       kernel_clip=clip,
-                                       bias_clip=0))
+                                       bias_constraint=Clip(0)))
         generator.add(BatchNorm(gamma_optimizer=RMSprop(), bias_optimizer=RMSprop()))
         generator.add(Relu())
         generator.add(TransposedConv2D(filter_size=(4, 4), kernels=1,
                                        kernel_reg=L2(),
                                        kernel_optimizer=RMSprop(), 
-                                       kernel_clip=clip,
-                                       bias_clip=0))
+                                       bias_constraint=Clip(0)))
         generator.add(Tanh())
         ###########################
         # DISCRIMINATOR
@@ -102,22 +97,22 @@ class MNISTGan(unittest.TestCase):
         discriminator.add(Convolve2D(filter_size=(4, 4), kernels=64, strides=(2,2),
                                      kernel_reg=L2(),
                                      kernel_optimizer=RMSprop(), 
-                                     kernel_clip=clip,
-                                     bias_clip=0))
+                                     kernel_constraint=Clip(clip),
+                                     bias_constraint=Clip(0)))
         discriminator.add(BatchNorm(gamma_optimizer=RMSprop(), bias_optimizer=RMSprop()))
         discriminator.add(Relu())
         discriminator.add(Convolve2D(filter_size=(3, 3), kernels=128, strides=(2,2),
                                      kernel_reg=L2(),
                                      kernel_optimizer=RMSprop(), 
-                                     kernel_clip=clip,
-                                     bias_clip=0))
+                                     kernel_constraint=Clip(clip),
+                                     bias_constraint=Clip(0)))
         discriminator.add(BatchNorm(gamma_optimizer=RMSprop(), bias_optimizer=RMSprop()))
         discriminator.add(Relu())
         discriminator.add(Flatten())
         discriminator.add(Dense(units=1, weight_reg=L2(),
                                 weight_optimizer=RMSprop(), 
-                                weight_clip=clip,
-                                bias_clip=0))
+                                weight_constraint=Clip(clip),
+                                bias_constraint=Clip(0)))
 
         generator.compile()
         discriminator.compile()
@@ -170,7 +165,7 @@ class MNISTGan(unittest.TestCase):
                         np.copyto(discriminator_X[batch_size:], self.train_images[batch*batch_size:
                                                                                   (batch+1)*batch_size])
                         discriminator.forward(discriminator_X)
-                        discriminator.backprop(-dldz)
+                        discriminator.backprop(dldz)
                         val = round(value(discriminator.output), 2)
                         losses.append(val)
 

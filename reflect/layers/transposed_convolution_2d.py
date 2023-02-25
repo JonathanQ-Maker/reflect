@@ -37,8 +37,8 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
     kernel_optimizer    = None
     bias_optimizer      = None
 
-    kernel_clip         = None
-    bias_clip           = None
+    kernel_constraint   = None
+    bias_constraint     = None
 
     # internal variables
     _base_shape         = None
@@ -121,8 +121,8 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
                  bias_reg           = None,
                  kernel_optimizer   = None,
                  bias_optimizer     = None,
-                 kernel_clip        = None,
-                 bias_clip          = None):
+                 kernel_constraint  = None,
+                 bias_constraint    = None):
 
 
         super().__init__()
@@ -134,8 +134,8 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
         self.bias_reg               = bias_reg
         self.kernel_optimizer       = kernel_optimizer
         self.bias_optimizer         = bias_optimizer
-        self.kernel_clip            = kernel_clip
-        self.bias_clip              = bias_clip
+        self.kernel_constraint      = kernel_constraint
+        self.bias_constraint        = bias_constraint
 
         if kernel_optimizer is None:
             self.kernel_optimizer   = Adam()
@@ -191,6 +191,12 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
         if (self.bias_reg is not None):
             self.bias_reg.compile(to_tuple(self.kernels))
 
+        # compile constraints
+        if (self.kernel_constraint is not None):
+            self.kernel_constraint.compile(self._kernel_shape)
+        if (self.bias_constraint is not None):
+            self.bias_constraint.compile(to_tuple(self.kernels))
+
         # compile optimizers
         self.kernel_optimizer.compile(self._kernel_shape)
         self.bias_optimizer.compile(self.kernels)
@@ -217,9 +223,6 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
                          and np.array_equal(self._dldz_window_shape, attributes[2])
                          and np.array_equal(self._dldz_window_stride, attributes[3]))
 
-        #base_ok = (self._base_input_view is not None 
-        #           and self._base_input_view.shape == self._input_shape)
-
         kernel_optimizer_ok = (self.kernel_optimizer is not None
                          and self.kernel_optimizer.is_compiled()
                          and self.kernel_optimizer.shape == self._kernel_shape)
@@ -228,13 +231,21 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
                          and self.bias_optimizer.is_compiled()
                          and self.bias_optimizer.shape == to_tuple(self.kernels))
 
+        kernel_constrain_ok = True
+        if (self.kernel_constraint is not None):
+            kernel_constrain_ok = self.kernel_constraint.is_compiled()
+        bias_constraint_ok = True
+        if (self.bias_constraint is not None):
+            bias_constraint_ok = self.bias_constraint.is_compiled()
+        constraints_ok = kernel_constrain_ok and bias_constraint_ok
+
 
         return (kernel_shape_match 
                 and dldk_ok and dldb_ok
                 and attributes_ok
-                #and base_ok
                 and kernel_optimizer_ok
-                and bias_optimizer_ok)
+                and bias_optimizer_ok
+                and constraints_ok)
 
     def compute_kernel_shape(self):
         return (self.kernels, ) + self._filter_size + (self._input_size[2], )
@@ -498,13 +509,13 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
         # kernel update
         np.subtract(self.param.kernel, self.kernel_optimizer.gradient(step, dldk),
               out=self.param.kernel)
-        if (self.kernel_clip is not None):
-            np.clip(self.param.kernel, -self.kernel_clip, self.kernel_clip, out=self.param.kernel)
+        if (self.kernel_constraint is not None):
+            self.kernel_constraint.constrain(self.param.kernel)
 
         # bias update
         np.subtract(self.param.bias, self.bias_optimizer.gradient(step, dldb), out=self.param.bias)
-        if (self.bias_clip is not None):
-            np.clip(self.param.bias, -self.bias_clip, self.bias_clip, out=self.param.bias)
+        if (self.bias_constraint is not None):
+            self.bias_constraint.constrain(self.param.bias)
 
 
     def attribute_to_str(self):

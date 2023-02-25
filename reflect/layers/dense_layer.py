@@ -28,8 +28,8 @@ class Dense(CachedLayer, ParametricLayer):
     weight_optimizer    = None
     bias_optimizer      = None
 
-    weight_clip         = None
-    bias_clip           = None
+    weight_constraint   = None
+    bias_constraint     = None
 
     @property
     def dldw(self):
@@ -62,8 +62,8 @@ class Dense(CachedLayer, ParametricLayer):
                  bias_reg           = None,
                  weight_optimizer   = None, 
                  bias_optimizer     = None,
-                 weight_clip        = None,
-                 bias_clip          = None):
+                 weight_constraint  = None,
+                 bias_constraint    = None):
 
 
         super().__init__()
@@ -73,8 +73,8 @@ class Dense(CachedLayer, ParametricLayer):
         self.bias_reg           = bias_reg
         self.weight_optimizer   = weight_optimizer
         self.bias_optimizer     = bias_optimizer
-        self.weight_clip        = weight_clip
-        self.bias_clip          = bias_clip
+        self.weight_constraint  = weight_constraint
+        self.bias_constraint    = bias_constraint
 
         # init optimizers
         if weight_optimizer is None:
@@ -107,6 +107,12 @@ class Dense(CachedLayer, ParametricLayer):
         self.weight_optimizer.compile(self._weight_shape)
         self.bias_optimizer.compile(self._output_size)
 
+        # compile constraints
+        if (self.weight_constraint is not None):
+            self.weight_constraint.compile(self._weight_shape)
+        if (self.bias_constraint is not None):
+            self.bias_constraint.compile(to_tuple(self._output_size))
+
         self.name = f"Dense {self._output_size}"
         if (gen_param):
             self.apply_param(self.create_param())
@@ -130,13 +136,22 @@ class Dense(CachedLayer, ParametricLayer):
                          and self.bias_optimizer.is_compiled()
                          and self.bias_optimizer.shape == to_tuple(self._output_size))
 
+        weight_constraint_ok = True
+        if (self.weight_constraint is not None):
+            weight_constraint_ok = self.weight_constraint.is_compiled()
+        bias_constraint_ok = True
+        if (self.bias_constraint is not None):
+            bias_constraint_ok = self.bias_constraint.is_compiled()
+        constraints_ok = weight_constraint_ok and bias_constraint_ok
+
         return (super().is_compiled() 
                 and weight_shape_match 
                 and regularizer_ok 
                 and dldw_ok 
                 and dldb_ok
                 and weight_optimizer_ok
-                and bias_optimizer_ok)
+                and bias_optimizer_ok
+                and constraints_ok)
 
     def init_weight(self, param, type):
         """
@@ -279,15 +294,15 @@ class Dense(CachedLayer, ParametricLayer):
         # weight update
         np.subtract(self.param.weight, self.weight_optimizer.gradient(step, dldw), 
                out=self.param.weight)
-        if (self.weight_clip is not None):
-            np.clip(self.param.weight, -self.weight_clip, self.weight_clip, out=self.param.weight)
+        if (self.weight_constraint is not None):
+            self.weight_constraint.constrain(self.param.weight)
 
 
         # bias update
         np.subtract(self.param.bias, self.bias_optimizer.gradient(step, dldb), 
                out=self.param.bias)
-        if (self.bias_clip is not None):
-            np.clip(self.param.bias, -self.bias_clip, self.bias_clip, out=self.param.bias)
+        if (self.bias_constraint is not None):
+            self.bias_constraint.constrain(self.param.bias)
 
 
     def attribute_to_str(self):

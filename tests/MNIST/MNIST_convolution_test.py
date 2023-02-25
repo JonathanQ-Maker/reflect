@@ -181,16 +181,16 @@ class MNISTConvolutionTest(unittest.TestCase):
         except KeyboardInterrupt:
             pass
 
-        for i in range(9):  
-            k = i * 2
-            output = model.forward(self.test_images[i])
-            output = output.view()
-            output.shape = (IMG_DIM, IMG_DIM)
-            pyplot.subplot(3, 3*2, 1 + k)
-            pyplot.imshow((output + 1) * 255, cmap=pyplot.get_cmap('gray'))
-            pyplot.subplot(3, 3*2, 2 + k)
-            pyplot.imshow((self.test_images[i] + 1) * 255, cmap=pyplot.get_cmap('gray'))
-        pyplot.show()
+        #for i in range(9):  
+        #    k = i * 2
+        #    output = model.forward(self.test_images[i])
+        #    output = output.view()
+        #    output.shape = (IMG_DIM, IMG_DIM)
+        #    pyplot.subplot(3, 3*2, 1 + k)
+        #    pyplot.imshow((output + 1) * 255, cmap=pyplot.get_cmap('gray'))
+        #    pyplot.subplot(3, 3*2, 2 + k)
+        #    pyplot.imshow((self.test_images[i] + 1) * 255, cmap=pyplot.get_cmap('gray'))
+        #pyplot.show()
 
         count = np.maximum(np.count_nonzero(losses), 1)
         l = np.sum(losses)/count
