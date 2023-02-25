@@ -24,7 +24,8 @@ class TransposedConvSN2D(TransposedConv2D):
                  kernel_reg         = None,
                  bias_reg           = None,
                  kernel_optimizer   = None,
-                 bias_optimizer     = None):
+                 bias_optimizer     = None,
+                 bias_constraint    = None):
         super().__init__(filter_size, 
                          kernels, 
                          strides, 
@@ -33,7 +34,7 @@ class TransposedConvSN2D(TransposedConv2D):
                          bias_reg, 
                          kernel_optimizer, 
                          bias_optimizer, 
-                         None, None)
+                         None, bias_constraint)
         self.lip_const = lip_const
 
     def compile(self, input_size, batch_size=1, gen_param=True):

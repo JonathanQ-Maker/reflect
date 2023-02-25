@@ -21,14 +21,15 @@ class DenseSN(Dense):
                  weight_reg         = None, 
                  bias_reg           = None, 
                  weight_optimizer   = None, 
-                 bias_optimizer     = None):
+                 bias_optimizer     = None,
+                 bias_constraint    = None):
         super().__init__(units, 
                          weight_type, 
                          weight_reg, 
                          bias_reg, 
                          weight_optimizer, 
                          bias_optimizer, 
-                         None, None)
+                         None, bias_constraint)
         self.lip_const = lip_const
 
     def compile(self, input_size, batch_size=1, gen_param=True):

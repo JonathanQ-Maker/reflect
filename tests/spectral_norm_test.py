@@ -4,6 +4,10 @@ import numpy as np
 
 
 class SNTest(unittest.TestCase):
+
+
+    def setUp(self):
+        np.random.seed(312)
     
     def test_DenseSN(self):
         lip_const = 3.17
