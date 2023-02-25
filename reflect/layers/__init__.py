@@ -8,3 +8,8 @@ from reflect.layers.average_pool_2d_layer import AvgPool2D
 from reflect.layers.recurrent_layer import Recurrent, RecurrentParam
 from reflect.layers.reshape_layer import Reshape
 from reflect.layers.tanh_layer import Tanh
+
+# Spectral Norm layers
+from reflect.layers.spectral_norm.convolution_sn_2d_layer import ConvolveSN2D
+from reflect.layers.spectral_norm.dense_sn_layer import DenseSN
+from reflect.layers.spectral_norm.transposed_convolution_sn_2d import TransposedConvSN2D
