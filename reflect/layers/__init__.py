@@ -8,6 +8,7 @@ from reflect.layers.average_pool_2d_layer import AvgPool2D
 from reflect.layers.recurrent_layer import Recurrent, RecurrentParam
 from reflect.layers.reshape_layer import Reshape
 from reflect.layers.tanh_layer import Tanh
+from reflect.layers.leaky_relu_layer import LeakyRelu
 
 # Spectral Norm layers
 from reflect.layers.spectral_norm.convolution_sn_2d_layer import ConvolveSN2D
