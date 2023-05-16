@@ -1,5 +1,6 @@
 from reflect.layers import DenseSN, ConvolveSN2D, TransposedConvSN2D
 from reflect.profiler import check_grad, num_grad
+from reflect.constraints import Clip
 import unittest
 import numpy as np
 
@@ -209,6 +210,73 @@ class SNTest(unittest.TestCase):
         
         passed, msg = check_grad(forward, K, layer.dldk, dout)
         self.assertTrue(passed, msg)
+
+    def test_limit(self):
+       
+        def calc_lip_const(f, x):
+            return np.linalg.norm(-f, axis=1) / np.linalg.norm(x, axis=1)
+
+        lip_const = 3.476
+        layer = DenseSN(units=1, lip_const=lip_const, bias_constraint=Clip(0))
+        input_size = 4
+        batch_size = 1
+        
+        
+        X = np.random.randn(batch_size, input_size)
+
+        self.assertFalse(layer.is_compiled(), "layer should not be compiled")
+        layer.compile(input_size=input_size, batch_size=batch_size)
+        self.assertTrue(layer.is_compiled(), "layer should be compiled")
+
+        dout = np.ones(layer.output_shape)
+
+        for i in range(1000):
+            output = layer.forward(X)
+            layer.backprop(dout)
+            layer.apply_grad(0.01)
+
+            if (i % 100 == 0):
+                print(f"output:\n{output}")
+                print(f"lip_const:\n{calc_lip_const(output, X)}")
+                print()
+
+        self.assertAlmostEqual(calc_lip_const(layer.output, X)[0], lip_const, 
+                               msg="expected and actual lip_const differ!")
+
+    def test_conv_lip_const(self):
+       
+        def calc_lip_const(f, x):
+            f = f.reshape((f.shape[0], -1))
+            x = x.reshape((x.shape[0], -1))
+            return np.linalg.norm(f, axis=1) / np.linalg.norm(x, axis=1)
+
+        lip_const = 2.47463
+        layer = ConvolveSN2D(kernels=1, filter_size=3, lip_const=lip_const, bias_constraint=Clip(0))
+        input_size = (3, 3, 1)
+        batch_size = 1
+
+        
+        X = np.random.randn(batch_size, input_size[0], input_size[1], input_size[2])
+
+        self.assertFalse(layer.is_compiled(), "layer should not be compiled")
+        layer.compile(input_size=input_size, batch_size=batch_size)
+        self.assertTrue(layer.is_compiled(), "layer should be compiled")
+
+        dout = np.ones(layer.output_shape)
+
+        for i in range(1000):
+            output = layer.forward(X)
+            layer.backprop(dout)
+            layer.apply_grad(0.01)
+
+            if (i % 100 == 0):
+                print(f"output:\n{output}")
+                print(f"lip_const:\n{calc_lip_const(output, X)}")
+                print()
+
+        self.assertAlmostEqual(calc_lip_const(layer.output, X)[0], lip_const, 
+                               msg="expected and actual lip_const differ!")
+
 
 
 

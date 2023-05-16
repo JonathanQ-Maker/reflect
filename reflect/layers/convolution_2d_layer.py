@@ -335,13 +335,18 @@ class Convolve2D(CachedLayer, ParametricLayer):
             param: param object to initalize weight to/store
         """
 
-        _, h, w, C = self._kernel_shape
+        K, h, w, C = self._kernel_shape
         scale = 1
         input_size = h*w*C
+        output_size = K
         if  (type == "xavier"):
-            scale = 1 / np.sqrt(input_size) # Xavier init
+            scale = np.sqrt(2.0 / (input_size + output_size)) # Xavier init
         elif (type == "he"):
-            scale = np.sqrt(2 / input_size) # he init, for relus
+            scale = np.sqrt(2.0 / input_size) # he init, for relus
+        elif (type == "xavier_uniform"):
+            scale = np.sqrt(6.0 / (input_size + output_size))
+            param.kernel = np.random.uniform(low=-scale, high=scale, size=self._kernel_shape)
+            return
         else:
             raise ValueError(f'no such weight type "{type}"')
 

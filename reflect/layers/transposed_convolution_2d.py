@@ -264,8 +264,9 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
         K, h, w, C = self._kernel_shape
         scale = 1
         input_size = h*w*C
+        output_size = K
         if  (type == "xavier"):
-            scale = 1 / np.sqrt(input_size) # Xavier init
+            scale = np.sqrt(2.0 / (input_size + output_size)) # Xavier init
         elif (type == "he"):
             scale = np.sqrt(2 / input_size) # he init, for relus
         else:

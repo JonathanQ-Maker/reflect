@@ -167,9 +167,13 @@ class Dense(CachedLayer, ParametricLayer):
 
         scale = 1
         if  (type == "xavier"):
-            scale = 1 / np.sqrt(self._input_size) # Xavier init
+            scale = np.sqrt(2.0 / (self._input_size + self._output_size)) # Xavier init
         elif (type == "he"):
-            scale = np.sqrt(2 / self._input_size) # he init, for relus
+            scale = np.sqrt(2.0 / self._input_size) # he init, for relus
+        elif (type == "xavier_uniform"):
+            scale = np.sqrt(6.0 / (self._input_size + self._output_size))
+            param.weight = np.random.uniform(low=-scale, high=scale, size=self._weight_shape)
+            return
         else:
             raise ValueError(f'no such weight type "{type}"')
 
