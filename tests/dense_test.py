@@ -317,9 +317,9 @@ class DenseTest(unittest.TestCase):
         weight = np.copy(l.param.weight)
 
         def forward(W):
-            l.param.weight = W
+            np.copyto(l.param.weight, W)
             out = np.sum((target - l.forward(x))**2) / 2
-            l.param.weight = weight_original
+            np.copyto(l.param.weight, weight_original)
             return out
 
         residual = target - l.forward(x)
@@ -351,9 +351,9 @@ class DenseTest(unittest.TestCase):
         weight = np.copy(l1.param.weight)
 
         def forward(W):
-            l1.param.weight = W
+            np.copyto(l1.param.weight, W)
             out = np.sum((target - l2.forward(l1.forward(x)))**2) / 2
-            l1.param.weight = weight_original
+            np.copyto(l1.param.weight, weight_original)
             return out
 
         residual = target - l2.forward(l1.forward(x))
@@ -385,9 +385,9 @@ class DenseTest(unittest.TestCase):
         bias = np.copy(l1.param.bias)
 
         def forward(b):
-            l1.param.bias = b
+            np.copyto(l1.param.bias, b)
             out = np.sum((target - l2.forward(l1.forward(x)))**2) / 2
-            l1.param.bias = bias_original
+            np.copyto(l1.param.bias, bias_original)
             return out
 
         residual = target - l2.forward(l1.forward(x))
@@ -434,9 +434,9 @@ class DenseTest(unittest.TestCase):
         weight = np.copy(l.param.weight)
 
         def forward(W):
-            l.param.weight = W
+            np.copyto(l.param.weight, W)
             out = np.sum((target - l.forward(x))**2) / 2
-            l.param.weight = weight_original
+            np.copyto(l.param.weight, weight_original)
             return out
 
         cache = l.create_cache()

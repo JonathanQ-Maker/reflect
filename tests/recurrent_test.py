@@ -67,7 +67,7 @@ class RecurrentTest(unittest.TestCase):
         # dldw
         original_weight = np.copy(l.param.weight)
         def forward(weight):
-            l.param.weight = weight
+            np.copyto(l.param.weight, weight)
             return l.forward(X, initial_state)
 
         l.forward(X, initial_state)
@@ -75,11 +75,12 @@ class RecurrentTest(unittest.TestCase):
 
         passed, msg = check_grad(forward, original_weight, l.dldw, dldz)
         self.assertTrue(passed, msg)
+        np.copyto(l.param.weight, original_weight)
 
         # dldh
         original_hidden = np.copy(l.param.hidden_weight)
         def forward(hidden_weight):
-            l.param.hidden_weight = hidden_weight
+            np.copyto(l.param.hidden_weight, hidden_weight)
             return l.forward(X, initial_state)
 
         l.forward(X, initial_state)
@@ -87,11 +88,12 @@ class RecurrentTest(unittest.TestCase):
 
         passed, msg = check_grad(forward, original_hidden, l.dldh, dldz, delta=1e-10)
         self.assertTrue(passed, msg)
+        np.copyto(l.param.hidden_weight, original_hidden)
 
         # dldb
         original_bias = np.copy(l.param.bias)
         def forward(bias):
-            l.param.bias = bias
+            np.copyto(l.param.bias, bias)
             return l.forward(X, initial_state)
 
         l.forward(X, initial_state)

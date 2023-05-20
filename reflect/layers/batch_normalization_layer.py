@@ -1,5 +1,5 @@
 from __future__ import annotations
-from reflect.layers.parametric_layer import ParametricLayer
+from reflect.layers.parametric_layer import ParametricLayer, Parameter
 from reflect.layers.cached_layer import CachedLayer, LayerCache
 from reflect import np
 from reflect.optimizers import Adam
@@ -138,13 +138,13 @@ class BatchNorm(CachedLayer, ParametricLayer):
     def create_param(self):
         super().create_param()
         param = BatchNormParam()
-        param.gamma     = np.ones(self._param_shape)
-        param.beta      = np.zeros(self._param_shape)
-        param.momentum  = self.momentum
-        param.epsilon   = self.epsilon
+        param.add_weight("gamma", np.ones(self._param_shape))
+        param.add_weight("beta", np.zeros(self._param_shape))
+        param.add_weight("momentum", self.momentum)
+        param.add_weight("epsilon", self.epsilon)
 
-        param.std       = np.ones(self._param_shape)
-        param.mean      = np.zeros(self._param_shape)
+        param.add_weight("std", np.ones(self._param_shape))
+        param.add_weight("mean", np.zeros(self._param_shape))
         return param
 
     def param_compatible(self, param: BatchNormParam):
@@ -334,15 +334,38 @@ class BatchNorm(CachedLayer, ParametricLayer):
 
 
 
-class BatchNormParam():
-    gamma = None    # std of output
-    beta = None     # mean of output
-    epsilon = None  # numerical stabilizer
-    momentum = None # momentum for expoential moving averaging
+class BatchNormParam(Parameter):
+
+    @property
+    def gamma(self):
+        # std of output
+        return self.get_weight("gamma")
+    
+    @property
+    def beta(self):
+        # mean of output
+        return self.get_weight("beta")
+
+    @property
+    def epsilon(self):
+        # numerical stabilizer
+        return self.get_weight("epsilon")
+    
+    @property
+    def momentum(self):
+        # momentum for expoential moving averaging
+        return self.get_weight("momentum")
 
     # expoential moving average for test time statistics
-    std = None      # test time input std
-    mean = None     # test time input mean
+    @property
+    def std(self):
+        # test time input std
+        return self.get_weight("std")
+
+    @property
+    def mean(self):
+        # test time input mean
+        return self.get_weight("mean")
 
 class BatchNormCache(LayerCache):
     _X      = None

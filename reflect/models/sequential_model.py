@@ -1,5 +1,5 @@
 from reflect.models.abstract_model import AbstractModel
-from reflect.layers.parametric_layer import ParametricLayer
+from reflect.layers.parametric_layer import ParametricLayer, Parameter
 from reflect.layers.abstract_layer import AbstractLayer
 from reflect.utils.misc import to_tuple
 
@@ -56,9 +56,33 @@ class SequentialModel(AbstractModel):
         return self._dldx
 
     def apply_grad(self, step):
+        super().apply_grad(step)
         for layer in self._layers:
             if (isinstance(layer, ParametricLayer)):
                 layer.apply_grad(step)
+
+    def serialize(self):
+        data = super().serialize()
+        layer_data = []
+        for layer in self._layers:
+            if (isinstance(layer, ParametricLayer)):
+                layer_data.append(layer.param.serialize())
+        data["layer_data"] = layer_data
+        data["summary"] = self.__str__()
+        return data
+
+    def populate(self, data: dict):
+        super().populate(data)
+
+        if ("layer_data" not in data.keys()):
+            raise ValueError("Does not contain expected data")
+        
+        i = 0
+        for layer in self._layers:
+            if (isinstance(layer, ParametricLayer)):
+                layer.param.populate(data["layer_data"][i])
+                i += 1
+
 
     def __getitem__(self, key):
         return self._layers[key]

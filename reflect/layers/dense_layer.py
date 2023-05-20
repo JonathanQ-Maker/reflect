@@ -1,5 +1,5 @@
 from __future__ import annotations
-from reflect.layers.parametric_layer import ParametricLayer
+from reflect.layers.parametric_layer import ParametricLayer, Parameter
 from reflect.layers.cached_layer import CachedLayer, LayerCache
 from reflect.optimizers import Adam
 from reflect.utils.misc import to_tuple
@@ -172,20 +172,20 @@ class Dense(CachedLayer, ParametricLayer):
             scale = np.sqrt(2.0 / self._input_size) # he init, for relus
         elif (type == "xavier_uniform"):
             scale = np.sqrt(6.0 / (self._input_size + self._output_size))
-            param.weight = np.random.uniform(low=-scale, high=scale, size=self._weight_shape)
+            param.add_weight("weight", np.random.uniform(low=-scale, high=scale, size=self._weight_shape))
             return
         else:
             raise ValueError(f'no such weight type "{type}"')
 
 
 
-        param.weight = np.random.normal(loc=0, scale=scale, size=self._weight_shape)
+        param.add_weight("weight", np.random.normal(loc=0, scale=scale, size=self._weight_shape))
 
     def create_param(self):
         super().create_param()
         param = DenseParam()
         self.init_weight(param, self.weight_type)
-        param.bias = np.zeros(self._output_size)
+        param.add_weight("bias", np.zeros(self._output_size))
         return param
 
     def param_compatible(self, param: DenseParam):
@@ -321,9 +321,15 @@ class Dense(CachedLayer, ParametricLayer):
 
 
 
-class DenseParam():
-    weight  = None
-    bias    = None
+class DenseParam(Parameter):
+
+    @property
+    def weight(self):
+        return self.get_weight("weight")
+    
+    @property
+    def bias(self):
+        return self.get_weight("bias")
 
 class DenseCache(LayerCache):
     _X      = None

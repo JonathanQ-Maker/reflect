@@ -48,3 +48,26 @@ class ParametricLayer(AbstractLayer):
     def attribute_to_str(self):
         return (super().attribute_to_str()
                 + f"params:         {self.total_params}\n")
+    
+
+class Parameter():
+    _data: dict = None
+
+    def __init__(self) -> None:
+        self._data = {}
+
+    def add_weight(self, name: str, weight):
+        self._data[name] = weight
+
+    def get_weight(self, name: str):
+        return self._data[name]
+    
+    def serialize(self):
+        '''
+        Returns shallow copy of data dict
+        '''
+        return self._data.copy()
+    
+    def populate(self, data: dict):
+        self._data = data
+

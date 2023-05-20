@@ -1,5 +1,5 @@
 from __future__ import annotations
-from reflect.layers.parametric_layer import ParametricLayer
+from reflect.layers.parametric_layer import ParametricLayer, Parameter
 from reflect.layers.cached_layer import CachedLayer, LayerCache
 from reflect.optimizers import Adam
 from reflect import np
@@ -268,11 +268,15 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
         if  (type == "xavier"):
             scale = np.sqrt(2.0 / (input_size + output_size)) # Xavier init
         elif (type == "he"):
-            scale = np.sqrt(2 / input_size) # he init, for relus
+            scale = np.sqrt(2.0 / input_size) # he init, for relus
+        elif (type == "xavier_uniform"):
+            scale = np.sqrt(6.0 / (input_size + output_size))
+            param.add_weight("kernel", np.random.uniform(low=-scale, high=scale, size=self._kernel_shape))
+            return
         else:
             raise ValueError(f'no such weight type "{type}"')
 
-        param.kernel = np.random.normal(loc=weight_bias, scale=scale, size=self._kernel_shape)
+        param.add_weight("kernel", np.random.normal(loc=weight_bias, scale=scale, size=self._kernel_shape))
 
     def compute_output_shape(self):
         return (self._batch_size, 
@@ -342,7 +346,7 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
         param = TransposedConv2DParam()
 
         self.init_kernel(param, self.weight_type, 0)
-        param.bias  = np.zeros(self.kernels)
+        param.add_weight("bias", np.zeros(self.kernels))
         return param
 
     def param_compatible(self, param: TransposedConv2DParam):
@@ -533,9 +537,14 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
 
 
 
-class TransposedConv2DParam():
-    kernel  = None
-    bias    = None
+class TransposedConv2DParam(Parameter):
+    @property
+    def kernel(self):
+        return self.get_weight("kernel")
+    
+    @property
+    def bias(self):
+        return self.get_weight("bias")
 
 class TransposedConv2DCache(LayerCache):
     _base                   = None

@@ -3,6 +3,7 @@ reflect.sln
 reflect.pyperf
 reflect.pyproj
 reflect.pyproj.user
+.vscode/
 .vs
 data/
 *.gz

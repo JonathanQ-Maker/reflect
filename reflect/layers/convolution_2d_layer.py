@@ -1,5 +1,5 @@
 from __future__ import annotations
-from reflect.layers.parametric_layer import ParametricLayer
+from reflect.layers.parametric_layer import ParametricLayer, Parameter
 from reflect.layers.cached_layer import CachedLayer, LayerCache
 from reflect import np
 from reflect.utils.misc import to_tuple, conv_size, in_conv_size
@@ -345,12 +345,12 @@ class Convolve2D(CachedLayer, ParametricLayer):
             scale = np.sqrt(2.0 / input_size) # he init, for relus
         elif (type == "xavier_uniform"):
             scale = np.sqrt(6.0 / (input_size + output_size))
-            param.kernel = np.random.uniform(low=-scale, high=scale, size=self._kernel_shape)
+            param.add_weight("kernel", np.random.uniform(low=-scale, high=scale, size=self._kernel_shape))
             return
         else:
             raise ValueError(f'no such weight type "{type}"')
 
-        param.kernel = np.random.normal(loc=weight_bias, scale=scale, size=self._kernel_shape)
+        param.add_weight("kernel", np.random.normal(loc=weight_bias, scale=scale, size=self._kernel_shape))
 
     def init_base(self):
         """
@@ -410,7 +410,7 @@ class Convolve2D(CachedLayer, ParametricLayer):
         param = Convolve2DParam()
 
         self.init_kernel(param, self.weight_type, 0)
-        param.bias  = np.zeros(self.kernels)
+        param.add_weight("bias", np.zeros(self.kernels))
         return param
 
     def regularizers_ok(self, kernel_reg, bias_reg):
@@ -599,9 +599,15 @@ class Convolve2D(CachedLayer, ParametricLayer):
 
 
 
-class Convolve2DParam():
-    kernel  = None
-    bias    = None
+class Convolve2DParam(Parameter):
+
+    @property
+    def kernel(self):
+        return self.get_weight("kernel")
+    
+    @property
+    def bias(self):
+        return self.get_weight("bias")
 
 class Convolve2DCache(LayerCache):
     _X      = None

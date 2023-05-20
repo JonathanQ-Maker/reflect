@@ -48,12 +48,12 @@ class ReluTest(unittest.TestCase):
         bias = np.copy(l1.param.bias)
 
         def forward(b):
-            l1.param.bias = b
+            np.copyto(l1.param.bias, b)
             return np.sum((target - l2.forward(l1.forward(x)))**2) / 2
 
         grad = num_grad(forward, bias)
 
-        l1.param.bias = bias_original
+        np.copyto(l1.param.bias, bias_original)
         residual = target - l2.forward(l1.forward(x))
         l1.backprop(l2.backprop(residual))
         real_grad = -l1.dldb
@@ -82,12 +82,12 @@ class ReluTest(unittest.TestCase):
         weight = np.copy(l1.param.weight)
 
         def forward(W):
-            l1.param.weight = W
+            np.copyto(l1.param.weight, W)
             return np.sum((target - l2.forward(l1.forward(x)))**2) / 2
 
         grad = num_grad(forward, weight)
 
-        l1.param.weight = weight_original
+        np.copyto(l1.param.weight, weight_original)
         residual = target - l2.forward(l1.forward(x))
         l1.backprop(l2.backprop(residual))
         real_grad = -l1.dldw

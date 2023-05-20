@@ -35,9 +35,9 @@ class Convolve2DTest(unittest.TestCase):
         original_k = l.param.kernel
         kernel = np.copy(l.param.kernel)
         def func(k):
-            l.param.kernel = k
+            np.copyto(l.param.kernel, k)
             return l.forward(x)
-        l.param.kernel = original_k
+        np.copyto(l.param.kernel, original_k)
         l.forward(x)
         l.backprop(dldz)
 
@@ -47,9 +47,9 @@ class Convolve2DTest(unittest.TestCase):
         original_b = l.param.bias
         bias = np.copy(l.param.bias)
         def func(b):
-            l.param.bias = b
+            np.copyto(l.param.bias, b)
             return l.forward(x)
-        l.param.bias = original_b
+        np.copyto(l.param.bias, original_b)
         l.forward(x)
         l.backprop(dldz)
 
@@ -87,9 +87,9 @@ class Convolve2DTest(unittest.TestCase):
         original_k = l.param.kernel
         kernel = np.copy(l.param.kernel)
         def func(k):
-            l.param.kernel = k
+            np.copyto(l.param.kernel, k)
             return l.forward(x)
-        l.param.kernel = original_k
+        np.copyto(l.param.kernel, original_k)
         l.forward(x)
         l.backprop(dldz)
 
@@ -99,9 +99,9 @@ class Convolve2DTest(unittest.TestCase):
         original_b = l.param.bias
         bias = np.copy(l.param.bias)
         def func(b):
-            l.param.bias = b
+            np.copyto(l.param.bias, b)
             return l.forward(x)
-        l.param.bias = original_b
+        np.copyto(l.param.bias, original_b)
         l.forward(x)
         l.backprop(dldz)
 
@@ -136,9 +136,9 @@ class Convolve2DTest(unittest.TestCase):
         original_k = l.param.kernel
         kernel = np.copy(l.param.kernel)
         def func(k):
-            l.param.kernel = k
+            np.copyto(l.param.kernel, k)
             return l.forward(x)
-        l.param.kernel = original_k
+        np.copyto(l.param.kernel, original_k)
         l.forward(x)
         l.backprop(dldz)
 
@@ -148,9 +148,9 @@ class Convolve2DTest(unittest.TestCase):
         original_b = l.param.bias
         bias = np.copy(l.param.bias)
         def func(b):
-            l.param.bias = b
+            np.copyto(l.param.bias, b)
             return l.forward(x)
-        l.param.bias = original_b
+        np.copyto(l.param.bias, original_b)
         l.forward(x)
         l.backprop(dldz)
 
@@ -186,9 +186,9 @@ class Convolve2DTest(unittest.TestCase):
         original_k = l.param.kernel
         kernel = np.copy(l.param.kernel)
         def func(k):
-            l.param.kernel = k
+            np.copyto(l.param.kernel, k)
             return l.forward(x)
-        l.param.kernel = original_k
+        np.copyto(l.param.kernel, original_k)
         l.forward(x)
         l.backprop(dldz)
 
@@ -198,9 +198,9 @@ class Convolve2DTest(unittest.TestCase):
         original_b = l.param.bias
         bias = np.copy(l.param.bias)
         def func(b):
-            l.param.bias = b
+            np.copyto(l.param.bias, b)
             return l.forward(x)
-        l.param.bias = original_b
+        np.copyto(l.param.bias, original_b)
 
         cache = l.create_cache()
         l.forward(x)
@@ -242,9 +242,9 @@ class Convolve2DTest(unittest.TestCase):
         original_k = l.param.kernel
         kernel = np.copy(l.param.kernel)
         def func(k):
-            l.param.kernel = k
+            np.copyto(l.param.kernel, k)
             return l.forward(x)
-        l.param.kernel = original_k
+        np.copyto(l.param.kernel, original_k)
         l.forward(x)
         l.backprop(dldz)
 
@@ -254,9 +254,9 @@ class Convolve2DTest(unittest.TestCase):
         original_b = l.param.bias
         bias = np.copy(l.param.bias)
         def func(b):
-            l.param.bias = b
+            np.copyto(l.param.bias, b)
             return l.forward(x)
-        l.param.bias = original_b
+        np.copyto(l.param.bias, original_b)
 
         cache = l.create_cache()
 

@@ -1,5 +1,5 @@
 from __future__ import annotations
-from reflect.layers.abstract_rnn import AbstractRNN
+from reflect.layers.abstract_rnn import AbstractRNN, Parameter
 from reflect.layers.cached_layer import CachedLayer
 from reflect.layers.relu_layer import Relu
 from reflect.optimizers.adam import Adam
@@ -196,9 +196,9 @@ class Recurrent(AbstractRNN):
         else:
             raise ValueError(f'no such weight type "{self.weight_type}"')
 
-        param.weight = np.random.normal(loc=0, scale=weight_scale, size=self._weight_shape)
-        param.hidden_weight = np.random.normal(loc=0, scale=hidden_scale, 
-                                               size=self._hidden_shape)
+        param.add_weight("weight", np.random.normal(loc=0, scale=weight_scale, size=self._weight_shape))
+        param.add_weight("hidden_weight", np.random.normal(loc=0, scale=hidden_scale, 
+                                               size=self._hidden_shape))
 
     def create_param(self):
         """
@@ -211,7 +211,7 @@ class Recurrent(AbstractRNN):
         super().create_param()
         param = RecurrentParam()
         self.init_weight(param)
-        param.bias = np.zeros(self._output_size)
+        param.add_weight("bias", np.zeros(self._output_size))
         return param
 
     def param_compatible(self, param: RecurrentParam):
@@ -357,7 +357,15 @@ class RecurrentStep():
         self.state  = np.zeros(state_shape)
 
 
-class RecurrentParam():
-    weight          = None
-    hidden_weight   = None
-    bias            = None
+class RecurrentParam(Parameter):
+    @property
+    def weight(self):
+        return self.get_weight("weight")
+    
+    @property
+    def hidden_weight(self):
+        return self.get_weight("hidden_weight")
+    
+    @property
+    def bias(self):
+        return self.get_weight("bias")

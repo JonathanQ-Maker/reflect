@@ -38,9 +38,9 @@ class TransposedConvolve2DTest(unittest.TestCase):
         original_k = l.param.kernel
         kernel = np.copy(l.param.kernel)
         def func(k):
-            l.param.kernel = k
+            np.copyto(l.param.kernel, k)
             return l.forward(x)
-        l.param.kernel = original_k
+        np.copyto(l.param.kernel, original_k)
         l.forward(x)
         l.backprop(dldz)
 
@@ -50,9 +50,9 @@ class TransposedConvolve2DTest(unittest.TestCase):
         original_b = l.param.bias
         bias = np.copy(l.param.bias)
         def func(b):
-            l.param.bias = b
+            np.copyto(l.param.bias, b)
             return l.forward(x)
-        l.param.bias = original_b
+        np.copyto(l.param.bias, original_b)
         l.forward(x)
         l.backprop(dldz)
 
@@ -89,9 +89,9 @@ class TransposedConvolve2DTest(unittest.TestCase):
         original_k = l.param.kernel
         kernel = np.copy(l.param.kernel)
         def func(k):
-            l.param.kernel = k
+            np.copyto(l.param.kernel, k)
             return l.forward(x)
-        l.param.kernel = original_k
+        np.copyto(l.param.kernel, original_k)
         l.forward(x)
         l.backprop(dldz)
 
@@ -101,9 +101,9 @@ class TransposedConvolve2DTest(unittest.TestCase):
         original_b = l.param.bias
         bias = np.copy(l.param.bias)
         def func(b):
-            l.param.bias = b
+            np.copyto(l.param.bias, b)
             return l.forward(x)
-        l.param.bias = original_b
+        np.copyto(l.param.bias, original_b)
         l.forward(x)
         l.backprop(dldz)
 
@@ -143,7 +143,7 @@ class TransposedConvolve2DTest(unittest.TestCase):
 
         # fill kernel predictble values so output will be predictble
         kernel = np.ones(l.param.kernel.shape) * np.arange(1, h*w+1).reshape((h, w, 1))
-        l.param.kernel = kernel
+        np.copyto(l.param.kernel, kernel)
         equal = np.array_equal(l.forward(x), expected_output)
         self.assertTrue(equal, "output is not equals to expected output")
         
@@ -176,9 +176,9 @@ class TransposedConvolve2DTest(unittest.TestCase):
         original_k = l.param.kernel
         kernel = np.copy(l.param.kernel)
         def func(k):
-            l.param.kernel = k
+            np.copyto(l.param.kernel, k)
             return l.forward(x)
-        l.param.kernel = original_k
+        np.copyto(l.param.kernel, original_k)
         l.forward(x)
         l.backprop(dldz)
 
@@ -188,9 +188,9 @@ class TransposedConvolve2DTest(unittest.TestCase):
         original_b = l.param.bias
         bias = np.copy(l.param.bias)
         def func(b):
-            l.param.bias = b
+            np.copyto(l.param.bias, b)
             return l.forward(x)
-        l.param.bias = original_b
+        np.copyto(l.param.bias, original_b)
 
         cache = l.create_cache()
 

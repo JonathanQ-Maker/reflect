@@ -21,18 +21,18 @@ class BatchNormTest(unittest.TestCase):
         bn.compile(D, N, gen_param=True)
         self.assertTrue(bn.is_compiled(), "is not compiled after compiling")
 
-        bn.param.beta = beta
-        bn.param.gamma = gamma
+        np.copyto(bn.param.beta, beta)
+        np.copyto(bn.param.gamma, gamma)
 
         def forward(x):
             return bn.forward(x)
 
         def forwardGamma(g):
-            bn.param.gamma = g
+            np.copyto(bn.param.gamma, g)
             return bn.forward(x)
 
         def forwardBeta(b):
-            bn.param.beta = b
+            np.copyto(bn.param.beta, b)
             return bn.forward(x)
 
 
@@ -69,18 +69,18 @@ class BatchNormTest(unittest.TestCase):
         bn.compile((H, W, C), B, gen_param=True)
         self.assertTrue(bn.is_compiled(), "is not compiled after compiling")
 
-        bn.param.beta = beta
-        bn.param.gamma = gamma
+        np.copyto(bn.param.beta, beta)
+        np.copyto(bn.param.gamma, gamma)
 
         def forward(x):
             return bn.forward(x)
 
         def forwardGamma(g):
-            bn.param.gamma = g
+            np.copyto(bn.param.gamma, g)
             return bn.forward(x)
 
         def forwardBeta(b):
-            bn.param.beta = b
+            np.copyto(bn.param.beta, b)
             return bn.forward(x)
 
         bn.forward(x)
@@ -116,8 +116,8 @@ class BatchNormTest(unittest.TestCase):
         bn.compile(D, N, gen_param=True)
         self.assertTrue(bn.is_compiled(), "is not compiled after compiling")
 
-        bn.param.beta = beta
-        bn.param.gamma = gamma
+        np.copyto(bn.param.beta, beta)
+        np.copyto(bn.param.gamma, gamma)
 
         bn.forward(x)
         real_grad = bn.backprop(dout)
@@ -142,8 +142,8 @@ class BatchNormTest(unittest.TestCase):
         bn.compile((H, W, C), B, gen_param=True)
         self.assertTrue(bn.is_compiled(), "is not compiled after compiling")
 
-        bn.param.beta = beta
-        bn.param.gamma = gamma
+        np.copyto(bn.param.beta, beta)
+        np.copyto(bn.param.gamma, gamma)
 
         bn.forward(x)
         real_grad = bn.backprop(dout)
@@ -173,8 +173,8 @@ class BatchNormTest(unittest.TestCase):
         bn.compile(D, N, gen_param=True)
         self.assertTrue(bn.is_compiled(), "is not compiled after compiling")
 
-        bn.param.beta = beta
-        bn.param.gamma = gamma
+        np.copyto(bn.param.beta, beta)
+        np.copyto(bn.param.gamma, gamma)
 
         target = (x - 12) * new_std / 5 + new_mean
         out = bn.forward(x)
@@ -212,8 +212,8 @@ class BatchNormTest(unittest.TestCase):
         bn.compile((H, W, C), B, gen_param=True)
         self.assertTrue(bn.is_compiled(), "is not compiled after compiling")
 
-        bn.param.beta = beta
-        bn.param.gamma = gamma
+        np.copyto(bn.param.beta, beta)
+        np.copyto(bn.param.gamma, gamma)
 
         target = (x - 12) * new_std / 5 + new_mean
         out = bn.forward(x)
@@ -255,10 +255,10 @@ class BatchNormTest(unittest.TestCase):
         self.assertTrue(bn_a.is_compiled(), "is not compiled after compiling")
         self.assertTrue(bn.is_compiled(), "is not compiled after compiling")
 
-        bn_a.param.beta = beta
-        bn_a.param.gamma = gamma
-        bn.param.beta = beta
-        bn.param.gamma = gamma
+        np.copyto(bn_a.param.beta, beta)
+        np.copyto(bn_a.param.gamma, gamma)
+        np.copyto(bn.param.beta, beta)
+        np.copyto(bn.param.gamma, gamma)
 
 
 
@@ -295,18 +295,18 @@ class BatchNormTest(unittest.TestCase):
         bn.compile(D, N, gen_param=True)
         self.assertTrue(bn.is_compiled(), "is not compiled after compiling")
 
-        bn.param.beta = beta
-        bn.param.gamma = gamma
+        np.copyto(bn.param.beta, beta)
+        np.copyto(bn.param.gamma, gamma)
 
         def forward(x):
             return bn.forward(x)
 
         def forwardGamma(g):
-            bn.param.gamma = g
+            np.copyto(bn.param.gamma, g)
             return bn.forward(x)
 
         def forwardBeta(b):
-            bn.param.beta = b
+            np.copyto(bn.param.beta, b)
             return bn.forward(x)
 
 
@@ -347,16 +347,16 @@ class BatchNormTest(unittest.TestCase):
         bn4 = BatchNorm()
         bn4.compile(D, 4, gen_param=True)
         self.assertTrue(bn4.is_compiled(), "is not compiled after compiling")
-        bn4.param.beta = beta
-        bn4.param.gamma = gamma
+        np.copyto(bn4.param.beta, beta)
+        np.copyto(bn4.param.gamma, gamma)
         bn4.forward(x4)
         bn4.backprop(dout4)
 
         bn8 = BatchNorm()
         bn8.compile(D, 8, gen_param=True)
         self.assertTrue(bn8.is_compiled(), "is not compiled after compiling")
-        bn8.param.beta = beta
-        bn8.param.gamma = gamma
+        np.copyto(bn8.param.beta, beta)
+        np.copyto(bn8.param.gamma, gamma)
         bn8.forward(x8)
         bn8.backprop(dout8)
 

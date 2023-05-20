@@ -1,5 +1,5 @@
 ﻿from __future__ import annotations
-from reflect.layers.parametric_layer import ParametricLayer
+from reflect.layers.parametric_layer import ParametricLayer, Parameter # NOTE: Must import Parameter because derivative class imports it
 from reflect.utils.misc import to_tuple
 from reflect import np
 
