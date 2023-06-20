@@ -1,6 +1,7 @@
 from __future__ import annotations
 from reflect.layers.abstract_layer import AbstractLayer
 from abc import abstractmethod
+import copy
 
 class ParametricLayer(AbstractLayer):
     param: Parameter = None
@@ -68,10 +69,13 @@ class Parameter():
     
     def serialize(self):
         '''
-        Returns shallow copy of data dict
+        Returns deep copy of data
         '''
-        return self._data.copy()
+        return copy.deepcopy(self._data)
     
     def populate(self, data: dict):
+        '''
+        NOTE: keeps passed data instance
+        '''
         self._data = data
 

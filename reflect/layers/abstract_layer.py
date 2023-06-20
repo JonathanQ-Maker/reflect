@@ -80,7 +80,7 @@ class AbstractLayer(CompiledObject):
         """
         Check if layer is up-to-date with layer arguments
 
-        # of check items should be the same as # of compile items
+        number of check items should be the same as number of compile items
         """
         input_size_match = self._input_shape == (self._batch_size, ) + to_tuple(self._input_size)
         output_size_match = self._output_shape == (self._batch_size, ) + to_tuple(self._output_size)
