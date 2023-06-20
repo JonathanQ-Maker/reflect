@@ -196,8 +196,8 @@ class Recurrent(AbstractRNN):
         else:
             raise ValueError(f'no such weight type "{self.weight_type}"')
 
-        param.add_weight("weight", np.random.normal(loc=0, scale=weight_scale, size=self._weight_shape))
-        param.add_weight("hidden_weight", np.random.normal(loc=0, scale=hidden_scale, 
+        param.set_weight("weight", np.random.normal(loc=0, scale=weight_scale, size=self._weight_shape))
+        param.set_weight("hidden_weight", np.random.normal(loc=0, scale=hidden_scale, 
                                                size=self._hidden_shape))
 
     def create_param(self):
@@ -211,7 +211,7 @@ class Recurrent(AbstractRNN):
         super().create_param()
         param = RecurrentParam()
         self.init_weight(param)
-        param.add_weight("bias", np.zeros(self._output_size))
+        param.set_weight("bias", np.zeros(self._output_size))
         return param
 
     def param_compatible(self, param: RecurrentParam):

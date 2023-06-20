@@ -172,20 +172,20 @@ class Dense(CachedLayer, ParametricLayer):
             scale = np.sqrt(2.0 / self._input_size) # he init, for relus
         elif (type == "xavier_uniform"):
             scale = np.sqrt(6.0 / (self._input_size + self._output_size))
-            param.add_weight("weight", np.random.uniform(low=-scale, high=scale, size=self._weight_shape))
+            param.set_weight("weight", np.random.uniform(low=-scale, high=scale, size=self._weight_shape))
             return
         else:
             raise ValueError(f'no such weight type "{type}"')
 
 
 
-        param.add_weight("weight", np.random.normal(loc=0, scale=scale, size=self._weight_shape))
+        param.set_weight("weight", np.random.normal(loc=0, scale=scale, size=self._weight_shape))
 
     def create_param(self):
         super().create_param()
         param = DenseParam()
         self.init_weight(param, self.weight_type)
-        param.add_weight("bias", np.zeros(self._output_size))
+        param.set_weight("bias", np.zeros(self._output_size))
         return param
 
     def param_compatible(self, param: DenseParam):

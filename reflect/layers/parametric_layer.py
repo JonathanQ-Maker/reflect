@@ -1,8 +1,9 @@
+from __future__ import annotations
 from reflect.layers.abstract_layer import AbstractLayer
 from abc import abstractmethod
 
 class ParametricLayer(AbstractLayer):
-    param = None
+    param: Parameter = None
 
     @property
     def total_params(self):
@@ -56,7 +57,10 @@ class Parameter():
     def __init__(self) -> None:
         self._data = {}
 
-    def add_weight(self, name: str, weight):
+    def set_weight(self, name: str, weight):
+        '''
+        Sets weight to parameter. 
+        '''
         self._data[name] = weight
 
     def get_weight(self, name: str):

@@ -138,13 +138,13 @@ class BatchNorm(CachedLayer, ParametricLayer):
     def create_param(self):
         super().create_param()
         param = BatchNormParam()
-        param.add_weight("gamma", np.ones(self._param_shape))
-        param.add_weight("beta", np.zeros(self._param_shape))
-        param.add_weight("momentum", self.momentum)
-        param.add_weight("epsilon", self.epsilon)
+        param.set_weight("gamma", np.ones(self._param_shape))   # std of output
+        param.set_weight("beta", np.zeros(self._param_shape))   # mean of output
+        param.set_weight("momentum", self.momentum)             # momentum for expoential moving averaging
+        param.set_weight("epsilon", self.epsilon)               # numerical stabilizer
 
-        param.add_weight("std", np.ones(self._param_shape))
-        param.add_weight("mean", np.zeros(self._param_shape))
+        param.set_weight("std", np.ones(self._param_shape))     # test time input std
+        param.set_weight("mean", np.zeros(self._param_shape))   # test time input mean
         return param
 
     def param_compatible(self, param: BatchNormParam):

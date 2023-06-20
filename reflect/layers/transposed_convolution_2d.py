@@ -271,12 +271,12 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
             scale = np.sqrt(2.0 / input_size) # he init, for relus
         elif (type == "xavier_uniform"):
             scale = np.sqrt(6.0 / (input_size + output_size))
-            param.add_weight("kernel", np.random.uniform(low=-scale, high=scale, size=self._kernel_shape))
+            param.set_weight("kernel", np.random.uniform(low=-scale, high=scale, size=self._kernel_shape))
             return
         else:
             raise ValueError(f'no such weight type "{type}"')
 
-        param.add_weight("kernel", np.random.normal(loc=weight_bias, scale=scale, size=self._kernel_shape))
+        param.set_weight("kernel", np.random.normal(loc=weight_bias, scale=scale, size=self._kernel_shape))
 
     def compute_output_shape(self):
         return (self._batch_size, 
@@ -346,7 +346,7 @@ class TransposedConv2D(CachedLayer, ParametricLayer):
         param = TransposedConv2DParam()
 
         self.init_kernel(param, self.weight_type, 0)
-        param.add_weight("bias", np.zeros(self.kernels))
+        param.set_weight("bias", np.zeros(self.kernels))
         return param
 
     def param_compatible(self, param: TransposedConv2DParam):
