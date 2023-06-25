@@ -7,6 +7,9 @@ reflect.pyproj.user
 .vs
 data/
 *.gz
+build/
+*.egg-info
+
 
 # https://stackoverflow.com/questions/65738611/why-does-git-ignore-not-work-for-pycache-folder
 **/__pycache__
